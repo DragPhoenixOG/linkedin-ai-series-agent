@@ -17,7 +17,7 @@ from typing import Any
 import yaml
 
 from agent.config import Config
-from agent.llm import LLM, LLMError
+from agent.llm import LLM, LLMAuthError, LLMError
 from agent.logs import log_event
 from agent.templates import render
 from agent.textutil import jaccard, slugify
@@ -170,6 +170,8 @@ def ensure_backlog(
         for attempt in range(1, attempts + 1):
             try:
                 added += merge_proposals(topics, propose(), covered)
+            except LLMAuthError:
+                raise
             except LLMError as exc:
                 log_event(
                     logger, "topics.propose_failed", logging.WARNING, attempt=attempt, error=exc

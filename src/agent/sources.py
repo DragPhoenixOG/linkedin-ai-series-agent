@@ -186,11 +186,27 @@ def html_to_text(html: str) -> str:
     return "\n".join(line for line in lines if line)
 
 
+# Words in almost every AI headline: matching on them says nothing about relevance.
+_GENERIC_WORDS = frozenset({"ai", "artificial", "intelligence", "tech", "technology"})
+
+
+def _wanted(phrases: list[str]) -> set[str]:
+    return (
+        set().union(*(significant_tokens(p) for p in phrases)) - _GENERIC_WORDS
+        if phrases
+        else set()
+    )
+
+
 def relevance(article: Article, phrases: list[str]) -> int:
-    """How many significant words from `phrases` appear in the article's title and summary."""
-    haystack = significant_tokens(f"{article.title} {article.summary}")
-    wanted = set().union(*(significant_tokens(p) for p in phrases)) if phrases else set()
-    return len(haystack & wanted)
+    """How many specific words from `phrases` appear in the article's title and summary."""
+    return len(significant_tokens(f"{article.title} {article.summary}") & _wanted(phrases))
+
+
+def is_relevant(article: Article, phrases: list[str]) -> bool:
+    """A specific topic word in the title, or two anywhere in title and summary."""
+    in_title = significant_tokens(article.title) & _wanted(phrases)
+    return bool(in_title) or relevance(article, phrases) >= 2
 
 
 # --- Network ----------------------------------------------------------------------------------

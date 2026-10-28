@@ -19,7 +19,7 @@ from datetime import date, timedelta
 from typing import Any
 
 from agent.config import Config
-from agent.llm import LLM, LLMError
+from agent.llm import LLM, LLMAuthError, LLMError
 from agent.logs import log_event
 from agent.research import to_source
 from agent.sources import Article, SourceClient, by_ids, dedupe, format_articles
@@ -248,7 +248,10 @@ def pick_story(
     history: History,
     require_major: bool = False,
 ) -> NewsStory | None:
-    """Gather, scan, filter, score and verify. Returns None if no story qualifies (never raises)."""
+    """Gather, scan, filter, score and verify. Returns None if no story qualifies.
+
+    Only a rejected API key raises (`LLMAuthError`); any other failure means no news today.
+    """
     try:
         ranked = rank_candidates(
             scan_news(llm, config, sources, today, history), history, config, today
@@ -259,6 +262,8 @@ def pick_story(
             story = verify_candidate(llm, config, sources, candidate, today)
             if story:
                 return story
+    except LLMAuthError:
+        raise
     except LLMError as exc:
         log_event(logger, "news.failed", logging.WARNING, error=exc)
     return None

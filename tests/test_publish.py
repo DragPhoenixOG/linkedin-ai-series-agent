@@ -9,7 +9,7 @@ from pathlib import Path
 import pytest
 
 from agent.linkedin import LinkedInAuthError, LinkedInError
-from agent.llm import LLMError
+from agent.llm import LLMAuthError, LLMError
 from agent.main import EXIT_FAILED, EXIT_OK, Services, parse_args, run
 from agent.notify import NEEDS_ATTENTION, POSTED, SCHEDULED, TOKEN_EXPIRY, NotifyError
 from agent.topics import load_topics, save_topics
@@ -284,3 +284,17 @@ def test_rejected_draft_is_dropped(root: Path) -> None:
     assert linkedin.posts == []
     assert history(root)["pending"]["record"]["date"] == "2026-10-29"
     assert len(notifier.titles(SCHEDULED)) == 2
+
+
+def test_rejected_api_key_fails_fast_with_clear_issue(root: Path) -> None:
+    llm = FakeLLM(
+        {
+            "research.queries": LLMAuthError(
+                "research.queries: access denied for this API key (enable the API)"
+            )
+        }
+    )
+    notifier = FakeNotifier()
+    assert live(root, llm=llm, notifier=notifier) == EXIT_FAILED
+    assert [c["label"] for c in llm.calls] == ["research.queries"]  # no writer, no editor
+    assert "enable the API" in notifier.issues[1]["body"]

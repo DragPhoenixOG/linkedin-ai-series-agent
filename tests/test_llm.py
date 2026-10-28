@@ -14,6 +14,7 @@ from agent.config import Config
 from agent.llm import (
     FALLBACK_BETA,
     AnthropicLLM,
+    LLMAuthError,
     LLMError,
     LLMRefusal,
     OpenAICompatLLM,
@@ -156,25 +157,41 @@ def test_compat_gives_up_after_retries() -> None:
 
 
 @pytest.mark.parametrize(
-    ("status", "message"),
+    ("status", "message", "error_type"),
     [
-        (401, "API key was rejected"),
-        (403, "API key was rejected"),
-        (404, "--check"),
-        (400, "rejected"),
+        (401, "API key was rejected", LLMAuthError),
+        (403, "access denied", LLMAuthError),
+        (404, "--check", LLMError),
+        (400, "rejected", LLMError),
     ],
 )
-def test_compat_client_errors_fail_fast(status: int, message: str) -> None:
+def test_compat_client_errors_fail_fast(status: int, message: str, error_type: type) -> None:
     calls: list[int] = []
 
     def handler(request: httpx.Request) -> httpx.Response:
         calls.append(1)
         return httpx.Response(status, json={"error": {"message": "nope"}})
 
-    with pytest.raises(LLMError, match=message) as info:
+    with pytest.raises(error_type, match=message) as info:
         ask(compat(handler))
     assert len(calls) == 1
     assert "key-123" not in str(info.value)
+
+
+def test_compat_403_keeps_the_providers_instructions() -> None:
+    guidance = (
+        "Gemini API has not been used in project 1048725232147 before or it is disabled. Enable it "
+        "by visiting https://console.developers.google.com/apis/api/generativelanguage.googleapis.com"
+        "/overview?project=1048725232147 then retry. If you enabled this API recently, wait a few "
+        "minutes for the action to propagate to our systems and retry."
+    )
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(403, json=[{"error": {"code": 403, "message": guidance}}])
+
+    with pytest.raises(LLMAuthError) as info:
+        ask(compat(handler))
+    assert "propagate to our systems and retry" in str(info.value)
 
 
 def test_compat_empty_and_filtered_replies() -> None:

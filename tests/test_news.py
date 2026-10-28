@@ -4,8 +4,10 @@ from __future__ import annotations
 
 from datetime import date
 
+import pytest
+
 from agent.config import Config
-from agent.llm import LLMError
+from agent.llm import LLMAuthError, LLMError
 from agent.news import (
     gather_headlines,
     has_enough_sources,
@@ -251,3 +253,9 @@ def test_require_major_ignores_normal_stories() -> None:
     llm = FakeLLM({"news.scan": {"candidates": [cand("Normal story")]}, "news.verify": verified()})
     assert pick_story(llm, Config(), news_sources(), TODAY, History(), require_major=True) is None
     assert [c["label"] for c in llm.calls] == ["news.scan"]
+
+
+def test_rejected_api_key_is_not_swallowed() -> None:
+    llm = FakeLLM({"news.scan": LLMAuthError("API key was rejected")})
+    with pytest.raises(LLMAuthError):
+        pick_story(llm, Config(), news_sources(), TODAY, History())
