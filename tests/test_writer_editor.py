@@ -151,3 +151,29 @@ def test_prompts_spell_out_personal_claims_and_humour_limits() -> None:
     editor_prompt = llm.calls[1]["prompt"]
     assert "made-up personal story" in editor_prompt
     assert "must fix every item you listed" in editor_prompt
+
+
+EMPTY_TEMPLATE = {
+    "human_score": 0,
+    "humour_score": 0,
+    "ai_sounding": [],
+    "fact_problems": [],
+    "rule_problems": [],
+    "verdict": "",
+    "rewrite": "",
+}
+
+
+def test_empty_template_review_is_asked_again() -> None:
+    real = EMPTY_TEMPLATE | {"human_score": 8, "verdict": "Fine.", "rewrite": "Better text"}
+    llm = FakeLLM({"editor": EMPTY_TEMPLATE, "editor.retry": real})
+    review = edit_draft(llm, Config(), brief(), "Draft text")
+    assert review.human_score == 8 and review.rewrite == "Better text"
+    assert [c["label"] for c in llm.calls] == ["editor", "editor.retry"]
+    assert "empty template" in llm.calls[1]["prompt"]
+
+
+def test_humorous_review_needs_a_humour_score() -> None:
+    no_humour = EMPTY_TEMPLATE | {"human_score": 8, "rewrite": "x"}
+    assert parse_review(no_humour, humorous=False).is_complete(humorous=False)
+    assert not parse_review(no_humour, humorous=True).is_complete(humorous=True)

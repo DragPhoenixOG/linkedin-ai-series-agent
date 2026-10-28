@@ -222,6 +222,20 @@ class OpenAICompatLLM(LLM):
                 if response.status_code == 403:
                     raise LLMAuthError(f"{label}: access denied for this API key ({error})")
                 if response.status_code == 404:
+                    if fallback and body["model"] != fallback:
+                        log_event(
+                            logger,
+                            "llm.model_not_found",
+                            logging.WARNING,
+                            label=label,
+                            model=body["model"],
+                            now_using=fallback,
+                            hint="run --check to see the models your key can use",
+                        )
+                        self._overloaded.add(body["model"])
+                        body["model"] = fallback
+                        overloads, attempt = 0, 0
+                        continue
                     raise LLMError(
                         f"{label}: {error}. Is the model name right? "
                         "Run `python -m agent.main --check` to list available models."
