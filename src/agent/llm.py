@@ -133,7 +133,14 @@ class LLM:
     @classmethod
     def from_env(cls, config: Config) -> LLM:
         """Create a client from `ANTHROPIC_API_KEY` (or another SDK credential source)."""
-        return cls(anthropic.Anthropic(max_retries=4), config)
+        hint = "Set ANTHROPIC_API_KEY (in .env locally, or as a GitHub Actions secret)."
+        try:
+            client = anthropic.Anthropic(max_retries=4)
+        except anthropic.AnthropicError as exc:
+            raise LLMError(f"Could not load Claude API credentials ({exc}). {hint}") from exc
+        if not (client.api_key or client.auth_token or client.credentials):
+            raise LLMError(f"No Claude API credentials found. {hint}")
+        return cls(client, config)
 
     def _create(self, **kwargs: Any) -> Any:
         if self._fallback_enabled:
