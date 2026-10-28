@@ -14,9 +14,17 @@ from datetime import date, timedelta
 from typing import Any
 
 from agent.config import Config
-from agent.llm import LLM, LLMError
+from agent.llm import LLM, LLMAuthError, LLMError
 from agent.logs import log_event
-from agent.sources import Article, SourceClient, by_ids, dedupe, format_articles, relevance
+from agent.sources import (
+    Article,
+    SourceClient,
+    by_ids,
+    dedupe,
+    format_articles,
+    is_relevant,
+    relevance,
+)
 from agent.state import Source
 from agent.templates import render
 
@@ -85,6 +93,8 @@ def suggest_queries(llm: LLM, config: Config, title: str, angle: str) -> list[st
             max_tokens=4000,
             json_schema=QUERY_SCHEMA,
         )
+    except LLMAuthError:
+        raise
     except LLMError as exc:
         log_event(logger, "research.queries_failed", logging.WARNING, error=exc)
         return [title]
@@ -99,7 +109,7 @@ def gather_articles(
     phrases = [title, *queries]
     # Feed items first: when the same article also turns up on Hacker News, keep the feed copy,
     # which has a summary and the right "official" flag.
-    found = [a for a in sources.feed_items(since, today) if relevance(a, phrases) >= 2]
+    found = [a for a in sources.feed_items(since, today) if is_relevant(a, phrases)]
     for query in queries:
         found += sources.search_hn(query, since, sources.settings.hn_min_points_research)
     ranked = sorted(
@@ -141,7 +151,7 @@ def parse_developments(
 def research_topic(
     llm: LLM, config: Config, sources: SourceClient, title: str, angle: str, today: date
 ) -> Research:
-    """Recent developments on a topic. Never raises: on any failure the post goes without."""
+    """Recent developments on a topic. On a failure the post goes without, except a bad API key."""
     since = today - timedelta(days=config.research_lookback_days)
     queries = suggest_queries(llm, config, title, angle)
     articles = gather_articles(sources, queries, title, since, today, config.max_articles_to_read)
@@ -165,6 +175,8 @@ def research_topic(
             prompt=prompt,
             effort=config.research_effort,
         )
+    except LLMAuthError:
+        raise
     except LLMError as exc:
         log_event(logger, "research.failed", logging.WARNING, error=exc)
         return Research()

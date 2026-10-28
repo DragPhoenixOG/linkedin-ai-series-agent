@@ -46,6 +46,11 @@ class LLMRefusal(LLMError):
     """The model declined the request."""
 
 
+class LLMAuthError(LLMError):
+    """The provider rejected the API key or the API isn't enabled. Nothing will work until fixed,
+    so callers that otherwise carry on without a step (research, news) let this one through."""
+
+
 @dataclass
 class Usage:
     """Token and cost totals for one run."""
@@ -197,8 +202,10 @@ class OpenAICompatLLM(LLM):
                 if response.status_code == 200:
                     return response.json()
                 error = f"HTTP {response.status_code}: {_error_message(response)}"
-                if response.status_code in (401, 403):
-                    raise LLMError(f"{label}: the API key was rejected ({error}). Check the key.")
+                if response.status_code == 401:
+                    raise LLMAuthError(f"{label}: the API key was rejected ({error})")
+                if response.status_code == 403:
+                    raise LLMAuthError(f"{label}: access denied for this API key ({error})")
                 if response.status_code == 404:
                     raise LLMError(
                         f"{label}: {error}. Is the model name right? "
@@ -262,7 +269,8 @@ class OpenAICompatLLM(LLM):
             f"{self.base_url}/models", headers={"Authorization": f"Bearer {self._api_key}"}
         )
         if response.status_code != 200:
-            raise LLMError(f"Listing models failed: HTTP {response.status_code}")
+            error = f"HTTP {response.status_code}: {_error_message(response)}"
+            raise LLMError(f"Listing models failed ({error})")
         return sorted(m["id"].removeprefix("models/") for m in response.json().get("data", []))
 
 
@@ -347,7 +355,7 @@ def _error_message(response: httpx.Response) -> str:
         data = data[0]
     error = data.get("error", data) if isinstance(data, dict) else {}
     message = error.get("message", "") if isinstance(error, dict) else str(error)
-    return str(message)[:300]
+    return str(message)[:500]
 
 
 def _is_number(value: str) -> bool:

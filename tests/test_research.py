@@ -4,8 +4,10 @@ from __future__ import annotations
 
 from datetime import date
 
+import pytest
+
 from agent.config import Config
-from agent.llm import LLMError
+from agent.llm import LLMAuthError, LLMError
 from agent.research import Research, gather_articles, parse_developments, research_topic
 from fakes import FakeLLM, FakeSources, article
 
@@ -116,3 +118,11 @@ def test_research_failure_degrades_to_empty() -> None:
     llm = FakeLLM({"research.queries": {"queries": ["mcp"]}, "research": LLMError("timeout")})
     sources = FakeSources(hn={"*": [MCP_HN]})
     assert research_topic(llm, Config(), sources, "MCP", "x", TODAY).developments == []
+
+
+def test_rejected_api_key_stops_the_run() -> None:
+    llm = FakeLLM({"research.queries": LLMAuthError("access denied for this API key")})
+    sources = FakeSources(hn={"*": [MCP_HN]})
+    with pytest.raises(LLMAuthError):
+        research_topic(llm, Config(), sources, "MCP", "x", TODAY)
+    assert sources.fetched == []  # no point reading articles the model can't use

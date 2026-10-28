@@ -15,6 +15,7 @@ from agent.sources import (
     dedupe,
     format_articles,
     html_to_text,
+    is_relevant,
     load_source_settings,
     parse_feed,
     relevance,
@@ -206,6 +207,15 @@ def test_relevance_counts_shared_words() -> None:
     )
     assert relevance(item, ["Model Context Protocol (MCP)"]) == 4
     assert relevance(item, ["quarterly earnings"]) == 0
+    generic = article("AI changes banking", "https://y.example", summary="Banks use AI tools.")
+    assert relevance(generic, ["From Generative AI to Agentic AI"]) == 0  # "AI" alone doesn't count
+    assert not is_relevant(generic, ["From Generative AI to Agentic AI"])
+    titled = article("Agentic workflows in retail", "https://z.example")
+    assert is_relevant(titled, ["From Generative AI to Agentic AI"])  # specific word in the title
+    summary_only = article(
+        "Weekly roundup", "https://w.example", summary="MCP servers and model context"
+    )
+    assert is_relevant(summary_only, ["Model Context Protocol (MCP)"])  # two words anywhere
 
 
 def test_real_feed_config_loads() -> None:
