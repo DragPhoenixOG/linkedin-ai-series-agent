@@ -1,0 +1,56 @@
+# Runtime configuration for the LinkedIn AI series agent.
+# Secrets never go here: see .env.example and the README.
+
+# --- Schedule -------------------------------------------------------------
+post_interval_days: 3
+post_time_utc: "03:30"            # the workflow cron runs daily at this time (9:00 AM IST)
+
+# --- Claude API -----------------------------------------------------------
+writer_model: claude-sonnet-5-5
+editor_model: claude-sonnet-5-5
+research_model: claude-sonnet-5-5   # research, news scan, fact checks and topic proposals
+writer_effort: high                 # output_config.effort: low | medium | high | xhigh | max
+editor_effort: high
+research_effort: medium             # lower effort = fewer, more consolidated searches
+web_search_tool: web_search_20260318  # current version per the web search tool docs (Oct 2026)
+research_max_searches: 5
+news_max_searches: 8
+verify_max_searches: 4
+research_lookback_days: 45          # how far back "recent" goes for skill-post research
+refusal_fallback: true              # server-side fallbacks: "default" on a safety decline
+
+# Prices in USD per 1M tokens, used only for the cost estimate in the run summary.
+pricing:
+  claude-sonnet-5-5: {input: 2.00, output: 10.00, cache_write: 2.50, cache_read: 0.20}
+  web_search_per_1k: 10.00
+
+# --- Post shape (section 4) ----------------------------------------------
+min_words: 120
+max_words: 250
+max_hashtags: 3
+max_emojis: 1
+max_em_dashes: 1
+max_bullets: 4
+max_links: 1
+
+# --- Quality gates --------------------------------------------------------
+min_editor_score: 8
+min_humour_score: 7
+max_attempts: 3
+
+# --- Content mix (section 2a) ---------------------------------------------
+news_post_ratio: 0.33
+news_lookback_days: 7
+news_recent_window: 10              # "already covered in the last 10 posts"
+big_news_check: true                # on skill days, a major verified story may jump the queue
+humour_ratio: 0.33
+
+# --- Topic backlog ----------------------------------------------------------
+auto_extend_topics: true
+min_pending_topics: 3
+new_topics_per_extension: 5
+
+# --- Publishing -------------------------------------------------------------
+review_window_hours: 0
+linkedin_api_version: "YYYYMM"      # set to a currently supported version in build step 6
+dry_run: false

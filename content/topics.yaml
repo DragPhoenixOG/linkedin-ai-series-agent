@@ -1,0 +1,97 @@
+# Topic backlog for skill posts. The agent takes the first `pending` topic in order.
+# The series is open-ended: when fewer than `min_pending_topics` remain, the agent asks
+# Claude for new ones and appends them here with `source: auto`.
+#
+# To add a topic by hand, append an entry with a unique id and `status: pending`.
+# Fields: id, title, angle, status (pending | posted), posted_on, linkedin_url, source.
+
+topics:
+  - id: generative-to-agentic-ai
+    title: From Generative AI to Agentic AI
+    angle: >-
+      AI moving from producing content to completing work; actions raise the stakes;
+      trust is the real skill.
+    status: pending
+    posted_on: null
+    linkedin_url: null
+    source: seed
+
+  - id: multi-agent-systems
+    title: Multi-agent systems
+    angle: >-
+      Small specialised agents + an orchestrator (Microsoft Agent Framework, Semantic Kernel,
+      AutoGen, LangChain). Same lesson as microservices: contained failures, testable parts.
+    status: pending
+    posted_on: null
+    linkedin_url: null
+    source: seed
+
+  - id: model-context-protocol
+    title: Model Context Protocol (MCP)
+    angle: >-
+      Open standard for exposing tools/data to agents. Build once, use with any agent.
+      Fewer brittle one-off integrations, permissions in one place.
+    status: pending
+    posted_on: null
+    linkedin_url: null
+    source: seed
+
+  - id: copilot-studio-m365-agent-toolkit
+    title: Copilot Studio and the Microsoft 365 Agent Toolkit
+    angle: >-
+      Low-code agents for business teams + pro-code inside Teams/Outlook. Adoption beats
+      sophistication; governance avoids shadow AI.
+    status: pending
+    posted_on: null
+    linkedin_url: null
+    source: seed
+
+  - id: forward-deployed-engineer
+    title: The Forward Deployed Engineer
+    angle: >-
+      Engineers embedded with clients who learn the real process (exceptions, workarounds)
+      and turn it into working systems. Domain knowledge is now core.
+    status: pending
+    posted_on: null
+    linkedin_url: null
+    source: seed
+
+  - id: backend-underneath-ai
+    title: The backend underneath AI
+    angle: >-
+      Python, FastAPI/Flask microservices, event-driven design, containers (Azure Container
+      Apps, App Service), retries, idempotency. Most of a production agent is normal engineering.
+    status: pending
+    posted_on: null
+    linkedin_url: null
+    source: seed
+
+  - id: agent-evaluation-observability
+    title: Agent evaluation and observability
+    angle: >-
+      Non-deterministic systems need systematic evals and trace-level visibility. Can't
+      measure it, can't improve it; can't trace it, can't trust it.
+    status: pending
+    posted_on: null
+    linkedin_url: null
+    source: seed
+
+  - id: responsible-ai-security
+    title: Responsible AI and security
+    angle: >-
+      Least privilege, human-in-the-loop for high-impact actions, prompt-injection defence,
+      audit logs. Trust is the bottleneck to adoption.
+    status: pending
+    posted_on: null
+    linkedin_url: null
+    source: seed
+
+  - id: prototype-to-production
+    title: From prototype to production
+    angle: >-
+      Why most AI demos never reach production, and what it takes to harden one: reliability
+      as an engineering discipline.
+    status: pending
+    posted_on: null
+    linkedin_url: null
+    source: seed
