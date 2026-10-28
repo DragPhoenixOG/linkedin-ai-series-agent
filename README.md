@@ -25,3 +25,5 @@ changes files in `state/`, `content/` or `posts/`.
   outputs: web search always returns citations, and the docs list citations as incompatible
   with `output_config.format`. Calls without web search (editor, topic proposals) use
   structured outputs.
+
+  -- Ashish
