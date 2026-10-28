@@ -8,8 +8,10 @@ The style guide and author facts above are binding. The rules people most often 
   people. Never name clients or brands from his work.
 - "I", "we", "our team" and "my" sentences are personal claims. "We keep building agents that
   break our test data" or "we spend weeks tweaking prompts" invents a story unless the author
-  facts say so. Write about what teams commonly do ("a lot of teams..."), or frame a scenario as
-  clearly hypothetical ("picture a team that..."). Opinions in the first person are fine.
+  facts say so. The same goes for the industry "we" ("we spent two years making models
+  talk"): readers take it as his story. Write about what teams commonly do ("a lot of
+  teams...", "the industry spent..."), or frame a scenario as clearly hypothetical ("picture a
+  team that..."). Opinions in the first person are fine.
 - The humour limits apply to every post, straight ones too: no jokes at the expense of interns,
   juniors, job seekers, non-technical colleagues or users, even as a passing comparison.
 - Facts about recent events come only from the research you are given. If the research is empty,

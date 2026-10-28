@@ -72,7 +72,7 @@ def compat(handler, sleeps: list[float] | None = None, **config) -> OpenAICompat
 def ask(llm, **overrides):
     kwargs = {
         "label": "test",
-        "model": "gemini-3.8-flash",
+        "model": "gemini-3.6-flash",
         "system": ["shared", "role"],
         "prompt": "hi",
     }
@@ -97,7 +97,7 @@ def test_compat_request_shape() -> None:
     assert request.headers["Authorization"] == "Bearer key-123"
     body = json.loads(request.content)
     assert body == {
-        "model": "gemini-3.8-flash",
+        "model": "gemini-3.6-flash",
         "messages": [
             {"role": "system", "content": "shared\n\nrole"},
             {"role": "user", "content": "hi"},
@@ -230,9 +230,9 @@ def test_complete_json_asks_again_after_bad_json() -> None:
 def test_list_models_strips_prefix() -> None:
     def handler(request: httpx.Request) -> httpx.Response:
         assert request.url.path.endswith("/models")
-        return httpx.Response(200, json={"data": [{"id": "models/gemini-3.8-flash"}, {"id": "b"}]})
+        return httpx.Response(200, json={"data": [{"id": "models/gemini-3.6-flash"}, {"id": "b"}]})
 
-    assert compat(handler).list_models() == ["b", "gemini-3.8-flash"]
+    assert compat(handler).list_models() == ["b", "gemini-3.6-flash"]
 
 
 # --- Provider selection -------------------------------------------------------------------------
@@ -361,7 +361,7 @@ def overloaded_then_ok(seen: list[str], failures: int, error: str = "503"):
     def handler(request: httpx.Request) -> httpx.Response:
         model = json.loads(request.content)["model"]
         seen.append(model)
-        if model == "gemini-3.8-flash" and len([m for m in seen if m == model]) <= failures:
+        if model == "gemini-3.6-flash" and len([m for m in seen if m == model]) <= failures:
             if error == "timeout":
                 raise httpx.ReadTimeout("hung", request=request)
             return httpx.Response(503, json={"error": {"message": "high demand"}})
@@ -377,7 +377,7 @@ def test_overloaded_model_switches_to_fallback_and_stays_there() -> None:
         overloaded_then_ok(seen, failures=99), sleeps, fallback_model="gemini-3.5-flash-lite"
     )
     assert ask(llm).text == "from gemini-3.5-flash-lite"
-    assert seen == ["gemini-3.8-flash", "gemini-3.8-flash", "gemini-3.5-flash-lite"]
+    assert seen == ["gemini-3.6-flash", "gemini-3.6-flash", "gemini-3.5-flash-lite"]
     assert len(sleeps) == 1  # one backoff, then the switch
     seen.clear()
     assert ask(llm).text == "from gemini-3.5-flash-lite"
@@ -396,8 +396,8 @@ def test_timeouts_count_as_overload() -> None:
 def test_one_overload_is_just_retried() -> None:
     seen: list[str] = []
     llm = compat(overloaded_then_ok(seen, failures=1), fallback_model="gemini-3.5-flash-lite")
-    assert ask(llm).text == "from gemini-3.8-flash"
-    assert seen == ["gemini-3.8-flash", "gemini-3.8-flash"]
+    assert ask(llm).text == "from gemini-3.6-flash"
+    assert seen == ["gemini-3.6-flash", "gemini-3.6-flash"]
 
 
 def test_rate_limits_do_not_switch_models() -> None:
@@ -410,7 +410,7 @@ def test_rate_limits_do_not_switch_models() -> None:
         return httpx.Response(200, json=chat_reply("ok"))
 
     ask(compat(handler, fallback_model="gemini-3.5-flash-lite"))
-    assert set(seen) == {"gemini-3.8-flash"}
+    assert set(seen) == {"gemini-3.6-flash"}
 
 
 def test_fallback_can_be_turned_off() -> None:
@@ -418,7 +418,7 @@ def test_fallback_can_be_turned_off() -> None:
     llm = compat(overloaded_then_ok(seen, failures=99), fallback_model="")
     with pytest.raises(LLMError, match="still failing"):
         ask(llm)
-    assert set(seen) == {"gemini-3.8-flash"}
+    assert set(seen) == {"gemini-3.6-flash"}
 
 
 def test_unknown_model_falls_back_and_stays_there() -> None:
@@ -427,14 +427,14 @@ def test_unknown_model_falls_back_and_stays_there() -> None:
     def handler(request: httpx.Request) -> httpx.Response:
         model = json.loads(request.content)["model"]
         seen.append(model)
-        if model == "gemini-3.8-flash":
+        if model == "gemini-3.6-flash":
             return httpx.Response(404, json={"error": {"message": "model not found"}})
         return httpx.Response(200, json=chat_reply(f"from {model}"))
 
     llm = compat(handler, fallback_model="gemini-3.5-flash-lite")
     assert ask(llm).text == "from gemini-3.5-flash-lite"
     assert ask(llm).text == "from gemini-3.5-flash-lite"
-    assert seen == ["gemini-3.8-flash", "gemini-3.5-flash-lite", "gemini-3.5-flash-lite"]
+    assert seen == ["gemini-3.6-flash", "gemini-3.5-flash-lite", "gemini-3.5-flash-lite"]
 
 
 def test_unknown_fallback_model_still_fails_clearly() -> None:

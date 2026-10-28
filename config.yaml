@@ -12,9 +12,11 @@ post_time_utc: "03:30"            # the workflow cron runs daily at this time (9
 #   anthropic: key in ANTHROPIC_API_KEY (prepaid credit at platform.claude.com)
 # Switching provider means changing llm_provider and the three model names below.
 # Run `python -m agent.main --check` to confirm the models exist for your key.
+# The newest Gemini Flash is often "overloaded" on the free tier, so the default is the one
+# before it. A model that is missing or keeps failing switches to fallback_model.
 llm_provider: gemini
-writer_model: gemini-3.8-flash      # groq: openai/gpt-oss-120b   anthropic: claude-sonnet-5-5
-editor_model: gemini-3.8-flash      # groq: openai/gpt-oss-120b   anthropic: claude-sonnet-5-5
+writer_model: gemini-3.6-flash      # groq: openai/gpt-oss-120b   anthropic: claude-sonnet-5-5
+editor_model: gemini-3.6-flash      # groq: openai/gpt-oss-120b   anthropic: claude-sonnet-5-5
 research_model: gemini-3.5-flash-lite  # groq: openai/gpt-oss-120b   anthropic: claude-sonnet-5-5
 llm_base_url: ""                    # optional override for any OpenAI-compatible endpoint
 llm_api_key_env: ""                 # optional override for the env var holding the key

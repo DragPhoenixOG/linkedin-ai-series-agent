@@ -29,11 +29,14 @@ $draft
 3. fact_problems: list claims not supported by the research or the author facts (invented
    numbers, overstated product capabilities, made-up personal stories, rumours stated as fact).
    Check every sentence with "I", "we", "our" or "my": if what it says Ashish or his team did
-   isn't in the author facts, it's a made-up personal story. List it. First-person opinions
-   ("I think...") are fine.
+   isn't in the author facts, it's a made-up personal story. List it. That includes the
+   industry "we" ("We spent two years...", "we keep building..."): readers take it as his own
+   story. First-person opinions ("I think...") are fine.
    rule_problems: list anything that breaks the style guide (banned words or patterns, length,
    hashtags, emoji, numbering, implying the series ends), including the humour hard limits even
    in a straight post (for example a joke at the expense of interns or junior people).
+   Both lists hold problems only. If there are none, return an empty list. Never add notes that
+   something is fine, allowed or correctly cited.
 4. $humour_instruction
 5. verdict: one blunt sentence on the draft.
 6. rewrite: the improved post. It must fix every item you listed in ai_sounding, fact_problems

@@ -291,20 +291,20 @@ def test_check_reports_models_and_feeds(root: Path) -> None:
     sources = fake_sources()
     sources.feed_status = {"Vendor Blog": "12 items", "Dead Feed": "unreachable"}
     sources.hn = {"*": [article("AI thing", "https://x.example", "2026-10-27")]}
-    code, output = run_check(root, checker(["gemini-3.8-flash", "gemini-3.5-flash-lite"]), sources)
+    code, output = run_check(root, checker(["gemini-3.6-flash", "gemini-3.5-flash-lite"]), sources)
     assert code == EXIT_OK
-    assert "model gemini-3.8-flash: available" in output
-    assert "available models: gemini-3.5-flash-lite, gemini-3.8-flash" in output
+    assert "model gemini-3.6-flash: available" in output
+    assert "available models: gemini-3.5-flash-lite, gemini-3.6-flash" in output
     assert "Dead Feed: unreachable" in output
     assert "Hacker News search: 1 results" in output
     assert output.strip().endswith("All good.")
 
 
 def test_check_flags_missing_model_and_key(root: Path) -> None:
-    code, output = run_check(root, checker(["gemini-3.8-flash"]), fake_sources())
+    code, output = run_check(root, checker(["gemini-3.6-flash"]), fake_sources())
     assert code == EXIT_USAGE
     assert "model gemini-3.5-flash-lite: NOT FOUND" in output
-    assert "available models: gemini-3.8-flash" in output
+    assert "available models: gemini-3.6-flash" in output
 
     def no_key(config):
         raise LLMError("GEMINI_API_KEY is not set.")

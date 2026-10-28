@@ -17,8 +17,8 @@ class Config:
     post_time_utc: str = "03:30"
 
     llm_provider: str = "gemini"
-    writer_model: str = "gemini-3.8-flash"
-    editor_model: str = "gemini-3.8-flash"
+    writer_model: str = "gemini-3.6-flash"
+    editor_model: str = "gemini-3.6-flash"
     research_model: str = "gemini-3.5-flash-lite"
     llm_base_url: str = ""
     llm_api_key_env: str = ""

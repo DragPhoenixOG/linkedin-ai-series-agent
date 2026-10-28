@@ -128,3 +128,13 @@ def test_incomplete_review_is_reported_as_such() -> None:
     assert result.attempts[0].problems == [
         "The editor returned an incomplete review (no scores or no rewrite)."
     ]
+
+
+def test_a_note_that_nothing_is_wrong_does_not_block_a_good_post() -> None:
+    fine = review(8, CLEAN_POST) | {
+        "fact_problems": ["No factual problems found; the reference is correctly cited."]
+    }
+    llm = FakeLLM({"writer": f"<post>{CLEAN_POST}</post>", "editor": fine})
+    result = generate_post(llm, Config(), brief())
+    assert result.success
+    assert len(result.attempts) == 1
