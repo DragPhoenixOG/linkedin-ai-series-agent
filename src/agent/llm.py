@@ -166,11 +166,16 @@ class LLM(ABC):
         return extract_json(response.text), response
 
 
+# Consecutive overload errors (5xx or timeouts) before switching to `fallback_model`.
+OVERLOAD_SWITCH = 2
+
+
 class OpenAICompatLLM(LLM):
     """Any OpenAI-compatible `/chat/completions` endpoint (Gemini, Groq, ...).
 
     Retries rate limits (429) and server errors with backoff, honouring `Retry-After`, because
-    free tiers hit per-minute limits quickly.
+    free tiers hit per-minute limits quickly. When a model keeps answering "overloaded" (5xx or
+    timeouts), it switches to `config.fallback_model` and keeps using it for the rest of the run.
     """
 
     def __init__(
@@ -185,19 +190,29 @@ class OpenAICompatLLM(LLM):
         super().__init__(config)
         self.base_url = base_url.rstrip("/")
         self._api_key = api_key
-        self._http = http or httpx.Client(timeout=180.0)
+        self._http = http or httpx.Client(timeout=float(config.llm_timeout_seconds))
         self.max_retries = max_retries
         self._sleep = sleep
+        self._overloaded: set[str] = set()  # models that kept failing this run
+
+    def _model_for(self, model: str) -> str:
+        fallback = self.config.fallback_model
+        return fallback if fallback and model in self._overloaded else model
 
     def _post(self, label: str, body: dict[str, Any]) -> dict[str, Any]:
+        """POST with retries. May switch `body["model"]` to the fallback model when overloaded."""
         headers = {"Authorization": f"Bearer {self._api_key}", "Content-Type": "application/json"}
-        for attempt in range(self.max_retries + 1):
+        fallback = self.config.fallback_model
+        overloads = 0
+        attempt = 0
+        while True:
             try:
                 response = self._http.post(
                     f"{self.base_url}/chat/completions", json=body, headers=headers
                 )
             except httpx.TransportError as exc:
                 error, delay = f"network error: {type(exc).__name__}", 2.0 ** (attempt + 1)
+                overloads += 1
             else:
                 if response.status_code == 200:
                     return response.json()
@@ -213,13 +228,27 @@ class OpenAICompatLLM(LLM):
                     )
                 if response.status_code != 429 and response.status_code < 500:
                     raise LLMError(f"{label}: request rejected ({error})")
+                overloads = overloads + 1 if response.status_code >= 500 else 0
                 retry_after = response.headers.get("retry-after", "")
                 delay = float(retry_after) if _is_number(retry_after) else 2.0 ** (attempt + 2)
-            if attempt == self.max_retries:
+            if overloads >= OVERLOAD_SWITCH and fallback and body["model"] != fallback:
+                log_event(
+                    logger,
+                    "llm.fallback_model",
+                    logging.WARNING,
+                    label=label,
+                    overloaded=body["model"],
+                    now_using=fallback,
+                )
+                self._overloaded.add(body["model"])
+                body["model"] = fallback
+                overloads, attempt = 0, 0
+                continue
+            if attempt >= self.max_retries:
                 raise LLMError(f"{label}: still failing after retries ({error})")
             log_event(logger, "llm.retry", logging.WARNING, label=label, error=error, wait_s=delay)
             self._sleep(min(delay, 90.0))
-        raise AssertionError("unreachable")
+            attempt += 1
 
     def complete(
         self,
@@ -235,7 +264,7 @@ class OpenAICompatLLM(LLM):
         if json_schema is not None:
             prompt = f"{prompt}\n\n{render('json_reply', schema=json.dumps(json_schema, indent=1))}"
         body = {
-            "model": model,
+            "model": self._model_for(model),
             "messages": [
                 {"role": "system", "content": "\n\n".join(s for s in system if s)},
                 {"role": "user", "content": prompt},
@@ -243,6 +272,7 @@ class OpenAICompatLLM(LLM):
             "max_tokens": min(max_tokens, self.config.max_output_tokens),
         }
         data = self._post(label, body)
+        model = body["model"]  # the fallback, if the requested model was overloaded
         usage = data.get("usage") or {}
         call = self.usage.add(
             model,

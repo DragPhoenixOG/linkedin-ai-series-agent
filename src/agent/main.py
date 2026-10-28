@@ -684,6 +684,8 @@ def check(ctx: Context, out: TextIO) -> int:
         problems += 1
         lines.append(f"  API key: PROBLEM: {exc}")
     models = {config.writer_model, config.editor_model, config.research_model}
+    if config.fallback_model and config.llm_provider != "anthropic":
+        models.add(config.fallback_model)
     if isinstance(llm, OpenAICompatLLM):
         try:
             available = set(llm.list_models())
