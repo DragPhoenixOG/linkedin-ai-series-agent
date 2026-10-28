@@ -294,6 +294,7 @@ def test_check_reports_models_and_feeds(root: Path) -> None:
     code, output = run_check(root, checker(["gemini-3.8-flash", "gemini-3.5-flash-lite"]), sources)
     assert code == EXIT_OK
     assert "model gemini-3.8-flash: available" in output
+    assert "available models: gemini-3.5-flash-lite, gemini-3.8-flash" in output
     assert "Dead Feed: unreachable" in output
     assert "Hacker News search: 1 results" in output
     assert output.strip().endswith("All good.")

@@ -695,8 +695,7 @@ def check(ctx: Context, out: TextIO) -> int:
                 lines.append(
                     f"  model {model}: {'available' if found else 'NOT FOUND for this key'}"
                 )
-            if problems:
-                lines.append(f"  available models: {', '.join(sorted(available)) or '(none)'}")
+            lines.append(f"  available models: {', '.join(sorted(available)) or '(none)'}")
         except LLMError as exc:
             problems += 1
             lines.append(f"  models: could not list ({exc})")

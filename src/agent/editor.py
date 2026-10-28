@@ -13,7 +13,7 @@ from typing import Any
 from agent.config import Config
 from agent.llm import LLM
 from agent.templates import fragment, render
-from agent.writer import PostBrief, format_recent_posts
+from agent.writer import PostBrief, format_recent_posts, tidy_post
 
 EDITOR_SCHEMA: dict[str, Any] = {
     "type": "object",
@@ -85,7 +85,7 @@ def parse_review(data: Any, humorous: bool) -> EditorReview:
     return EditorReview(
         human_score=_clamp_score(data.get("human_score")),
         humour_score=_clamp_score(data.get("humour_score")) if humorous else None,
-        rewrite=str(data.get("rewrite", "")).strip(),
+        rewrite=tidy_post(str(data.get("rewrite", ""))),
         ai_sounding=ai_sounding,
         fact_problems=[str(p) for p in data.get("fact_problems", []) if str(p).strip()],
         rule_problems=[str(p) for p in data.get("rule_problems", []) if str(p).strip()],
