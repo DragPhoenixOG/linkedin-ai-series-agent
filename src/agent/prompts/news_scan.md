@@ -1,17 +1,16 @@
-Today is $today. Find tech and AI news from the last $lookback_days days (published on or after
-$since) that an engineer writing about AI and enterprise reliability might react to on LinkedIn.
+Today is $today. Below are tech and AI headlines from the last $lookback_days days, each with an id
+like [A1], where it was published, the date, and a short summary when the feed had one.
 
-Look for: model launches, new agent frameworks or protocols, big enterprise AI rollouts, outages
-or AI failures with lessons, funding or acquisitions that shift the market, regulation that
-affects how companies build with AI, developer tooling changes, and commerce/retail tech meeting
-AI.
+Pick 5 to 10 candidate stories that an engineer writing about AI and enterprise reliability might
+react to on LinkedIn: model launches, new agent frameworks or protocols, big enterprise AI
+rollouts, outages or AI failures with lessons, funding or acquisitions that shift the market,
+regulation that affects how companies build with AI, developer tooling changes, and
+commerce/retail tech meeting AI.
 
-Collect 5 to 10 candidate stories. Rules:
-- Prefer original sources: company blogs, official announcements, docs, regulators, and
-  reputable tech press. Avoid aggregators, SEO rewrites and social posts as the main source.
-- Give at least 2 sources from different sites for each story, or 1 official source (the company
-  or body the news is about). Mark official sources with "official": true.
-- Check each publication date. Skip anything published before $since.
+Rules:
+- Use only what the headlines and summaries say. Nothing from memory.
+- Several headlines may cover the same story: list all their ids together in headline_ids.
+  A story needs either 2 headlines from different sites, or 1 marked "official".
 - Mark rumours, leaks, "reportedly" stories and speculation as "confirmed": false.
 - Skip stories already covered in earlier posts:
 $covered
@@ -24,15 +23,18 @@ For each candidate, rate:
 - significance: "major" only for a genuinely big story (a major model launch, a major AI
   incident, a market-shifting deal or regulation). Otherwise "normal".
 
-When you are done searching, reply with only this JSON inside <result></result> tags:
+Headlines:
+
+$headlines
+
+Reply with only this JSON inside <result></result> tags:
 
 <result>
 {"candidates": [
   {"title": "Short factual headline in your own words",
-   "summary": "One or two plain sentences: what happened, who, when.",
-   "date": "YYYY-MM-DD",
+   "summary": "One or two plain sentences: what happened, who.",
    "key_facts": ["Each concrete claim a post would rely on, one per item"],
-   "sources": [{"url": "https://...", "title": "Page title", "publisher": "Publisher", "official": false}],
+   "headline_ids": ["A3", "A7"],
    "confirmed": true,
    "significance": "normal",
    "relevance": 4,

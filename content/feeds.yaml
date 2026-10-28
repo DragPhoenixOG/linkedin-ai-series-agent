@@ -1,0 +1,48 @@
+# Free, keyless research sources. Edit freely: add feeds you trust, remove ones that go quiet.
+# A feed that fails to load is skipped (and shown by `python -m agent.main --check`).
+#
+# official: true marks a company's own blog. Official sources count as verification on their own;
+# anything else needs two independent sources.
+
+feeds:
+  # Company and project blogs (official)
+  - {name: OpenAI News, url: "https://openai.com/news/rss.xml", official: true}
+  - {name: Google AI Blog, url: "https://blog.google/technology/ai/rss/", official: true}
+  - {name: Google DeepMind, url: "https://deepmind.google/blog/rss.xml", official: true}
+  - {name: Microsoft AI Blog, url: "https://blogs.microsoft.com/ai/feed/", official: true}
+  - {name: Microsoft 365 Developer Blog, url: "https://devblogs.microsoft.com/microsoft365dev/feed/", official: true}
+  - {name: Semantic Kernel and Agent Framework Blog, url: "https://devblogs.microsoft.com/semantic-kernel/feed/", official: true}
+  - {name: AWS Machine Learning Blog, url: "https://aws.amazon.com/blogs/machine-learning/feed/", official: true}
+  - {name: GitHub Blog, url: "https://github.blog/feed/", official: true}
+  - {name: Hugging Face Blog, url: "https://huggingface.co/blog/feed.xml", official: true}
+
+  # Tech press
+  - {name: TechCrunch AI, url: "https://techcrunch.com/category/artificial-intelligence/feed/"}
+  - {name: The Verge AI, url: "https://www.theverge.com/rss/ai-artificial-intelligence/index.xml"}
+  - {name: Ars Technica AI, url: "https://arstechnica.com/ai/feed/"}
+  - {name: MIT Technology Review AI, url: "https://www.technologyreview.com/topic/artificial-intelligence/feed"}
+
+  # Retail and commerce tech
+  - {name: Retail Dive, url: "https://www.retaildive.com/feeds/news/"}
+
+# Links on these domains count as official even when found through Hacker News.
+official_domains:
+  - openai.com
+  - anthropic.com
+  - blog.google
+  - deepmind.google
+  - ai.google.dev
+  - microsoft.com
+  - github.blog
+  - aws.amazon.com
+  - huggingface.co
+  - modelcontextprotocol.io
+  - meta.com
+  - nvidia.com
+  - salesforce.com
+  - shopify.com
+
+hacker_news:
+  min_points_news: 100      # only well-discussed stories for news posts
+  min_points_research: 10   # lower bar when researching a specific skill topic
+  news_queries: [AI, LLM, AI agents, OpenAI, Anthropic, Gemini, Copilot, Model Context Protocol]

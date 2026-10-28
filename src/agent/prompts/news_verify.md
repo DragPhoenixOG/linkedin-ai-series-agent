@@ -1,31 +1,32 @@
 Today is $today. Before anyone writes about this story, check that it is true and correctly
-described.
+described, using only the article text below.
 
-Story: $title (reported $date)
+Story: $title (first reported $date)
 Summary: $summary
 
 Key facts to check:
 $facts
 
-Sources found so far:
-$sources
+Articles (each with an id like [A1] and an excerpt of its text):
 
-Use web search to check each key fact against at least 2 independent sources, or against 1
-official source (the company, project or body the story is about). Read what the sources
-actually say; don't rely on headlines.
+$articles
 
-- "supported": true only if the fact is clearly stated by those sources.
+For each key fact:
+- "supported": true only if the article text clearly states it. Headlines alone don't count.
+- "article_ids": the ids of the articles that state it.
+
+Then:
 - status: "confirmed" if the story happened as described; "unconfirmed" if it rests on leaks,
-  "reportedly", anonymous sources or is still a rumour; "false" if sources contradict it.
+  "reportedly", anonymous sources or is still a rumour; "false" if the articles contradict it.
 - verified: true only if status is "confirmed" and every key fact is supported.
-- summary: one or two plain sentences of what verifiably happened, corrected if needed.
+- summary: one or two plain sentences of what verifiably happened, corrected if needed, in your
+  own words.
 
-When you are done, reply with only this JSON inside <result></result> tags:
+Reply with only this JSON inside <result></result> tags:
 
 <result>
 {"verified": true,
  "status": "confirmed",
- "facts": [{"fact": "...", "supported": true, "sources": ["https://..."]}],
- "summary": "...",
- "sources": [{"url": "https://...", "title": "Page title", "publisher": "Publisher", "official": true}]}
+ "facts": [{"fact": "...", "supported": true, "article_ids": ["A1"]}],
+ "summary": "..."}
 </result>

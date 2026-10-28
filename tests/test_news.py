@@ -1,4 +1,4 @@
-"""News scanning, filtering, de-duplication, scoring and verification."""
+"""News gathering, scanning, filtering, de-duplication, scoring and verification."""
 
 from __future__ import annotations
 
@@ -7,6 +7,7 @@ from datetime import date
 from agent.config import Config
 from agent.llm import LLMError
 from agent.news import (
+    gather_headlines,
     has_enough_sources,
     is_already_covered,
     parse_candidates,
@@ -15,21 +16,40 @@ from agent.news import (
     score,
 )
 from agent.state import History, NewsStory, PostRecord, Source
-from fakes import FakeLLM, seq
+from fakes import FakeLLM, FakeSources, article, seq
 
 TODAY = date(2026, 10, 28)
 
+RULES_OFFICIAL = article(
+    "Regulator publishes AI audit rules",
+    "https://regulator.example/rules",
+    "2026-10-26",
+    "Regulator",
+    official=True,
+)
+RULES_PRESS = article("AI audit rules land", "https://press.example/audit", "2026-10-26", "Press")
+SDK_NEWS = article("Vendor ships agent SDK 2.0", "https://news.example/sdk", "2026-10-27", "News")
+SDK_PRESS = article("Agent SDK 2.0 is out", "https://press.example/sdk", "2026-10-25", "Press")
+LONE_BLOG = article("A single blog post", "https://blog.example/x", "2026-10-24", "Blog")
+HEADLINES = [RULES_OFFICIAL, RULES_PRESS, SDK_NEWS, SDK_PRESS, LONE_BLOG]
 
-def cand(title: str, day: str = "2026-10-26", **overrides) -> dict:
+
+def news_sources(**kwargs) -> FakeSources:
+    return FakeSources(feed=list(HEADLINES), **kwargs)
+
+
+def ids(*articles) -> list[str]:
+    """Headline ids as the scan prompt numbers them."""
+    order = [a.url for a in gather_headlines(news_sources(), TODAY, 7)]
+    return [f"A{order.index(a.url) + 1}" for a in articles]
+
+
+def cand(title: str, headlines: list | None = None, **overrides) -> dict:
     data = {
         "title": title,
         "summary": f"{title} happened.",
-        "date": day,
         "key_facts": [f"{title} is real"],
-        "sources": [
-            {"url": f"https://press.example/{len(title)}", "publisher": "Press"},
-            {"url": f"https://news.example/{len(title)}", "publisher": "News"},
-        ],
+        "headline_ids": ids(*(headlines or [SDK_NEWS, SDK_PRESS])),
         "confirmed": True,
         "significance": "normal",
         "relevance": 4,
@@ -44,9 +64,8 @@ def verified(**overrides) -> dict:
     data = {
         "verified": True,
         "status": "confirmed",
-        "facts": [{"fact": "x", "supported": True, "sources": ["https://press.example/1"]}],
+        "facts": [{"fact": "x", "supported": True, "article_ids": ["A1", "A2"]}],
         "summary": "Verified summary.",
-        "sources": [],
     }
     data.update(overrides)
     return data
@@ -64,20 +83,36 @@ def news_post(day: str, story: NewsStory) -> PostRecord:
     )
 
 
-def test_parse_candidates_filters_dates_and_bad_items() -> None:
-    data = {
-        "candidates": [
-            cand("Fresh story"),
-            cand("Too old", day="2026-10-10"),
-            cand("From the future", day="2026-11-02"),
-            cand("No date", day="soon"),
-            {"title": ""},
-            "junk",
-        ]
-    }
-    parsed = parse_candidates(data, TODAY, 7)
-    assert [c.title for c in parsed] == ["Fresh story"]
-    assert parsed[0].confirmed is True
+def parsed(*candidates: dict):
+    return parse_candidates(
+        {"candidates": list(candidates)}, gather_headlines(news_sources(), TODAY, 7)
+    )
+
+
+def test_gather_headlines_merges_dedupes_and_filters_window() -> None:
+    old = article("Old story", "https://old.example/x", "2026-10-10")
+    hn = article("HN copy", "https://news.example/sdk/?ref=hn", "2026-10-27", points=300)
+    sources = FakeSources(
+        feed=[*HEADLINES, old],
+        hn={"*": [hn, article("HN only", "https://hn.example/a", "2026-10-28")]},
+    )
+    headlines = gather_headlines(sources, TODAY, 7)
+    urls = [a.url for a in headlines]
+    assert urls[0] == "https://hn.example/a"  # newest first
+    assert "https://old.example/x" not in urls
+    assert sum("news.example/sdk" in u for u in urls) == 1
+    assert sources.searches == ["AI"]
+
+
+def test_parse_candidates_maps_ids_and_drops_bad_items() -> None:
+    [good] = parsed(
+        cand("SDK story"),
+        {"title": "No headlines", "headline_ids": ["A99"]},
+        {"title": "", "headline_ids": ["A1"]},
+    )
+    assert [a.url for a in good.articles] == [SDK_NEWS.url, SDK_PRESS.url]
+    assert good.date == "2026-10-25"  # earliest cited headline
+    assert good.confirmed is True
 
 
 def test_source_rule_two_domains_or_one_official() -> None:
@@ -91,23 +126,17 @@ def test_source_rule_two_domains_or_one_official() -> None:
 
 def test_dedup_by_key_title_similarity_and_url() -> None:
     story = NewsStory(
-        key="vendor-launches-agent-sdk-2-0",
-        title="Vendor launches Agent SDK 2.0",
+        key="vendor-ships-agent-sdk-2-0",
+        title="Vendor ships agent SDK 2.0",
         summary="",
         date="2026-10-01",
-        sources=[Source("https://vendor.example/sdk2")],
+        sources=[Source("https://news.example/sdk")],
     )
-    [same_title, similar, same_url, different] = parse_candidates(
-        {
-            "candidates": [
-                cand("Vendor launches Agent SDK 2.0"),
-                cand("Vendor launches its Agent SDK 2.0 for developers"),
-                cand("Totally new name", sources=[{"url": "https://vendor.example/sdk2/"}]),
-                cand("Regulator publishes AI audit rules"),
-            ]
-        },
-        TODAY,
-        7,
+    same_title, similar, same_url, different = parsed(
+        cand("Vendor ships agent SDK 2.0", [LONE_BLOG]),
+        cand("Vendor ships its agent SDK 2.0 for developers", [LONE_BLOG]),
+        cand("Totally new name", [SDK_NEWS]),
+        cand("Regulator publishes AI audit rules", [RULES_OFFICIAL]),
     )
     assert is_already_covered(same_title, [story])
     assert is_already_covered(similar, [story])
@@ -116,16 +145,10 @@ def test_dedup_by_key_title_similarity_and_url() -> None:
 
 
 def test_score_prefers_relevant_fresh_major_and_penalises_recent_overlap() -> None:
-    [fresh, stale, major] = parse_candidates(
-        {
-            "candidates": [
-                cand("Fresh one", day="2026-10-27"),
-                cand("Stale one", day="2026-10-22"),
-                cand("Major one", day="2026-10-22", significance="major"),
-            ]
-        },
-        TODAY,
-        7,
+    fresh, stale, major = parsed(
+        cand("Fresh one", [SDK_NEWS]),
+        cand("Stale one", [LONE_BLOG]),
+        cand("Major one", [LONE_BLOG], significance="major"),
     )
     assert score(fresh, TODAY, 7, []) > score(stale, TODAY, 7, [])
     assert score(major, TODAY, 7, []) > score(stale, TODAY, 7, [])
@@ -135,49 +158,57 @@ def test_score_prefers_relevant_fresh_major_and_penalises_recent_overlap() -> No
 def test_rank_drops_unconfirmed_thin_and_covered_stories() -> None:
     covered = NewsStory(key="old-news", title="Old news story", summary="", date="2026-10-01")
     history = History(posts=[news_post("2026-10-02", covered)])
-    candidates = parse_candidates(
-        {
-            "candidates": [
-                cand("Leaked roadmap", confirmed=False),
-                cand("Single blog only", sources=[{"url": "https://blog.example/x"}]),
-                cand("Old news story"),
-                cand("Good story", relevance=5),
-                cand("Okay story", relevance=2),
-            ]
-        },
-        TODAY,
-        7,
+    candidates = parsed(
+        cand("Leaked roadmap", confirmed=False),
+        cand("Single blog only", [LONE_BLOG]),
+        cand("Old news story"),
+        cand("Good story", relevance=5),
+        cand("Official only story", [RULES_OFFICIAL], relevance=2),
     )
     ranked = rank_candidates(candidates, history, Config(), TODAY)
-    assert [c.title for c in ranked] == ["Good story", "Okay story"]
+    assert [c.title for c in ranked] == ["Good story", "Official only story"]
 
 
-def test_pick_story_verifies_top_candidate() -> None:
+def test_pick_story_verifies_against_fetched_text() -> None:
     llm = FakeLLM(
         {"news.scan": {"candidates": [cand("Good story", relevance=5)]}, "news.verify": verified()}
     )
-    story = pick_story(llm, Config(), TODAY, History())
+    sources = news_sources(texts={SDK_NEWS.url: "Vendor released SDK 2.0 on Monday."})
+    story = pick_story(llm, Config(), sources, TODAY, History())
     assert story is not None
     assert story.title == "Good story"
     assert story.summary == "Verified summary."
     assert story.key == "good-story"
+    assert [s.url for s in story.sources] == [SDK_NEWS.url, SDK_PRESS.url]
     assert [c["label"] for c in llm.calls] == ["news.scan", "news.verify"]
-    assert llm.calls[0]["web_search_max_uses"] == Config().news_max_searches
+    assert "Vendor released SDK 2.0 on Monday." in llm.calls[1]["prompt"]
+    assert sources.fetched == [SDK_NEWS.url, SDK_PRESS.url]
+
+
+def test_official_source_is_listed_first() -> None:
+    llm = FakeLLM(
+        {
+            "news.scan": {"candidates": [cand("Audit rules", [RULES_PRESS, RULES_OFFICIAL])]},
+            "news.verify": verified(),
+        }
+    )
+    story = pick_story(llm, Config(), news_sources(), TODAY, History())
+    assert story.sources[0].official is True
 
 
 def test_pick_story_moves_to_next_candidate_when_verification_fails() -> None:
     llm = FakeLLM(
         {
             "news.scan": {
-                "candidates": [cand("Top story", relevance=5), cand("Second story", relevance=3)]
+                "candidates": [
+                    cand("Top story", relevance=5),
+                    cand("Second story", [RULES_OFFICIAL], relevance=3),
+                ]
             },
-            "news.verify": seq(
-                verified(status="unconfirmed", verified=False),
-                verified(),
-            ),
+            "news.verify": seq(verified(status="unconfirmed", verified=False), verified()),
         }
     )
-    story = pick_story(llm, Config(), TODAY, History())
+    story = pick_story(llm, Config(), news_sources(), TODAY, History())
     assert story is not None and story.title == "Second story"
 
 
@@ -185,23 +216,38 @@ def test_pick_story_rejects_unsupported_facts() -> None:
     llm = FakeLLM(
         {
             "news.scan": {"candidates": [cand("Only story")]},
-            "news.verify": verified(facts=[{"fact": "x", "supported": False}]),
+            "news.verify": verified(
+                facts=[{"fact": "x", "supported": False, "article_ids": ["A1"]}]
+            ),
         }
     )
-    assert pick_story(llm, Config(), TODAY, History()) is None
+    assert pick_story(llm, Config(), news_sources(), TODAY, History()) is None
 
 
-def test_pick_story_returns_none_when_nothing_qualifies() -> None:
-    llm = FakeLLM({"news.scan": {"candidates": []}})
-    assert pick_story(llm, Config(), TODAY, History()) is None
+def test_pick_story_needs_enough_supporting_articles() -> None:
+    llm = FakeLLM(
+        {
+            "news.scan": {"candidates": [cand("Only story")]},
+            "news.verify": verified(
+                facts=[{"fact": "x", "supported": True, "article_ids": ["A1"]}]
+            ),
+        }
+    )
+    assert pick_story(llm, Config(), news_sources(), TODAY, History()) is None
+
+
+def test_no_headlines_means_no_model_calls() -> None:
+    llm = FakeLLM({})
+    assert pick_story(llm, Config(), FakeSources(), TODAY, History()) is None
+    assert llm.calls == []
 
 
 def test_pick_story_survives_api_failure() -> None:
-    llm = FakeLLM({"news.scan": LLMError("search down")})
-    assert pick_story(llm, Config(), TODAY, History()) is None
+    llm = FakeLLM({"news.scan": LLMError("rate limited")})
+    assert pick_story(llm, Config(), news_sources(), TODAY, History()) is None
 
 
 def test_require_major_ignores_normal_stories() -> None:
     llm = FakeLLM({"news.scan": {"candidates": [cand("Normal story")]}, "news.verify": verified()})
-    assert pick_story(llm, Config(), TODAY, History(), require_major=True) is None
+    assert pick_story(llm, Config(), news_sources(), TODAY, History(), require_major=True) is None
     assert [c["label"] for c in llm.calls] == ["news.scan"]

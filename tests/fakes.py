@@ -1,14 +1,15 @@
-"""Test doubles for the Claude API. No test ever talks to a real external service."""
+"""Test doubles for every external service. No test ever talks to a real network."""
 
 from __future__ import annotations
 
 import json
 from collections.abc import Callable
+from datetime import date
 from types import SimpleNamespace
 from typing import Any
 
 from agent.llm import LLMResponse, Usage, extract_json
-from agent.state import Source
+from agent.sources import Article, SourceSettings
 
 Reply = Any  # dict/list (JSON), str (text), Exception, or a callable(call) -> one of those
 
@@ -44,7 +45,7 @@ class FakeLLM:
         text = reply if isinstance(reply, str) else json.dumps(reply)
         if not isinstance(reply, str) and kwargs.get("json_schema") is None:
             text = f"<result>{text}</result>"
-        return LLMResponse(text=text, citations=[Source(url="https://cited.example/a")])
+        return LLMResponse(text=text)
 
     def complete_json(self, **kwargs: Any) -> tuple[Any, LLMResponse]:
         response = self.complete(**kwargs)
@@ -153,3 +154,61 @@ class FakeNotifier:
 
     def titles(self, label: str | None = None) -> list[str]:
         return [i["title"] for i in self.issues.values() if label is None or label in i["labels"]]
+
+
+def article(
+    title: str,
+    url: str,
+    day: str = "2026-10-26",
+    source: str = "Example News",
+    official: bool = False,
+    summary: str = "",
+    points: int = 0,
+) -> Article:
+    return Article(
+        title=title,
+        url=url,
+        published=date.fromisoformat(day),
+        source=source,
+        official=official,
+        summary=summary,
+        points=points,
+    )
+
+
+class FakeSources:
+    """Stands in for `agent.sources.SourceClient` with canned feed items and search hits."""
+
+    def __init__(
+        self,
+        feed: list[Article] | None = None,
+        hn: dict[str, list[Article]] | None = None,
+        texts: dict[str, str] | None = None,
+    ) -> None:
+        self.settings = SourceSettings(news_queries=["AI"])
+        self.feed = feed or []
+        self.hn = hn or {}  # query -> hits; "*" matches any query
+        self.texts = texts or {}
+        self.fetched: list[str] = []
+        self.searches: list[str] = []
+        self.feed_status: dict[str, str] = {}
+
+    def all_feed_items(self) -> list[Article]:
+        return list(self.feed)
+
+    def feed_items(self, since: date, until: date | None = None) -> list[Article]:
+        return [a for a in self.feed if since <= a.published <= (until or date.max)]
+
+    def search_hn(self, query: str, since: date, min_points: int, limit: int = 20) -> list[Article]:
+        self.searches.append(query)
+        hits = self.hn.get(query, self.hn.get("*", []))
+        return [a for a in hits if a.published >= since]
+
+    def fetch_text(self, url: str) -> str:
+        self.fetched.append(url)
+        return self.texts.get(url, f"Full article text from {url}.")
+
+    def read(self, articles: list[Article]) -> list[Article]:
+        for a in articles:
+            a.text = self.fetch_text(a.url) or a.summary
+        return articles

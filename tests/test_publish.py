@@ -1,4 +1,4 @@
-"""Live runs end to end, with Claude, LinkedIn and GitHub all faked."""
+"""Live runs end to end, with the model, research sources, LinkedIn and GitHub all faked."""
 
 from __future__ import annotations
 
@@ -15,7 +15,15 @@ from agent.notify import NEEDS_ATTENTION, POSTED, SCHEDULED, TOKEN_EXPIRY, Notif
 from agent.topics import load_topics, save_topics
 from conftest import CLEAN_POST
 from fakes import FakeLinkedIn, FakeLLM, FakeNotifier
-from test_main import add_history, editor_reply, past_post, research_reply, root, snapshot
+from test_main import (
+    add_history,
+    editor_reply,
+    fake_sources,
+    past_post,
+    research_replies,
+    root,
+    snapshot,
+)
 
 __all__ = ["root"]  # pytest fixture re-exported from test_main
 
@@ -31,7 +39,7 @@ def env(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Path:
 def happy_llm() -> FakeLLM:
     return FakeLLM(
         {
-            "research": research_reply(),
+            **research_replies(),
             "writer": f"<post>{CLEAN_POST}</post>",
             "editor": editor_reply(),
             "topics.propose": {
@@ -54,7 +62,7 @@ def live(
 ) -> int:
     def llm_factory(config):
         if llm is None:
-            raise AssertionError("Claude must not be called in this run")
+            raise AssertionError("the model must not be called in this run")
         return llm
 
     def linkedin_factory(config):
@@ -64,6 +72,7 @@ def live(
         llm_factory=llm_factory,
         linkedin_factory=linkedin_factory,
         notifier_factory=lambda: notifier or FakeNotifier(),
+        sources_factory=lambda config, root: fake_sources(),
     )
     return run(parse_args(["--root", str(root), "--date", date, *argv]), services, io.StringIO())
 
@@ -145,7 +154,7 @@ def test_quality_failure_opens_needs_attention_and_posts_nothing(root: Path) -> 
     before = snapshot(root)
     llm = FakeLLM(
         {
-            "research": research_reply(),
+            **research_replies(),
             "writer": "<post>Too short.</post>",
             "editor": editor_reply(score=5) | {"rewrite": "Too short."},
         }
@@ -198,7 +207,7 @@ def test_missing_linkedin_settings_fail_before_spending_on_claude(root: Path) ->
 
 
 def test_claude_failure_opens_needs_attention(root: Path) -> None:
-    llm = FakeLLM({"research": research_reply(), "writer": LLMError("overloaded")})
+    llm = FakeLLM({**research_replies(), "writer": LLMError("overloaded")})
     notifier = FakeNotifier()
     assert live(root, llm=llm, notifier=notifier) == EXIT_FAILED
     assert notifier.titles(NEEDS_ATTENTION) == ["Post needs attention (2026-10-28)"]
