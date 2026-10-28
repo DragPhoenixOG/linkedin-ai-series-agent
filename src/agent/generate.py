@@ -73,6 +73,13 @@ def score_problems(review: EditorReview, brief: PostBrief, config: Config) -> li
             f'Editor scored "actually funny and still professional" {review.humour_score}/10; '
             f"needs {config.min_humour_score}."
         )
+    if review.fact_problems:
+        # Unsupported claims (above all invented personal stories) are a hard rule, so a good
+        # score isn't enough: the next round must come back clean.
+        problems.append(
+            f"Editor found {len(review.fact_problems)} unsupported claim(s); "
+            "the next version must come back with none."
+        )
     return problems
 
 

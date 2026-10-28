@@ -11,7 +11,7 @@ from agent.config import Config
 from agent.editor import edit_draft, parse_review
 from agent.llm import LLMError
 from agent.state import NewsStory, Source
-from agent.writer import PostBrief, Voice, extract_post, load_voice, write_draft
+from agent.writer import PostBrief, Voice, extract_post, load_voice, tidy_post, write_draft
 from fakes import FakeLLM
 
 REPO = Path(__file__).resolve().parents[1]
@@ -127,3 +127,27 @@ def test_editor_uses_schema_and_humour_instructions() -> None:
     assert call["json_schema"]["required"]
     assert "is it actually funny" in call["prompt"]
     assert "<draft>\nDraft text\n</draft>" in call["prompt"]
+
+
+def test_tidy_post_spaces_paragraphs_and_keeps_lists_together() -> None:
+    raw = "First line.\nSecond paragraph.\n\n\n\nThree things:\n- one\n- two\nAfter the list.\n#AI #Agents"
+    assert tidy_post(raw) == (
+        "First line.\n\nSecond paragraph.\n\nThree things:\n\n- one\n- two\n\nAfter the list.\n\n#AI #Agents"
+    )
+
+
+def test_writer_output_and_editor_rewrite_are_tidied() -> None:
+    assert extract_post("<post>One.\nTwo.</post>") == "One.\n\nTwo."
+    review = parse_review({"human_score": 9, "rewrite": "One.\nTwo."}, humorous=False)
+    assert review.rewrite == "One.\n\nTwo."
+
+
+def test_prompts_spell_out_personal_claims_and_humour_limits() -> None:
+    llm = FakeLLM({"writer": "<post>x</post>", "editor": {"human_score": 9, "rewrite": "x"}})
+    write_draft(llm, Config(), brief())
+    edit_draft(llm, Config(), brief(), "x")
+    writer_system = llm.calls[0]["system"][1]
+    assert "personal claims" in writer_system and "interns" in writer_system
+    editor_prompt = llm.calls[1]["prompt"]
+    assert "made-up personal story" in editor_prompt
+    assert "must fix every item you listed" in editor_prompt

@@ -103,11 +103,29 @@ def subject_block(brief: PostBrief, config: Config) -> str:
     return render("subject_skill", title=brief.topic_title, angle=brief.topic_angle)
 
 
+_LIST_ITEM_RE = re.compile(r"^\s*(?:[-*\u2022\u2013]|\d{1,2}[.)])\s+\S")
+
+
+def tidy_post(text: str) -> str:
+    """One blank line between paragraphs (and before the hashtags); list items stay together."""
+    out: list[str] = []
+    for line in (raw.rstrip() for raw in text.strip().splitlines()):
+        if not line.strip():
+            if out and out[-1]:
+                out.append("")
+            continue
+        previous = out[-1] if out else ""
+        same_list = bool(_LIST_ITEM_RE.match(line) and _LIST_ITEM_RE.match(previous))
+        if previous and not same_list:
+            out.append("")
+        out.append(line)
+    return "\n".join(out).strip()
+
+
 def extract_post(text: str) -> str:
     """Pull the post out of `<post>` tags (or use the whole reply if the tags are missing)."""
     match = re.search(r"<post>\s*(.*?)\s*</post>", text, re.DOTALL)
-    post = match.group(1) if match else text
-    post = post.strip()
+    post = tidy_post(match.group(1) if match else text)
     if not post:
         raise LLMError("Writer returned an empty post")
     return post

@@ -98,3 +98,18 @@ def test_gives_up_after_max_attempts_and_returns_best() -> None:
     assert len(result.attempts) == 3
     assert result.best.number == 2  # same lint problems, highest editor score
     assert any("banned_phrase" in p for p in result.best.problems)
+
+
+def test_unsupported_claims_force_another_round_even_with_a_good_score() -> None:
+    invented = review(9, CLEAN_POST) | {
+        "fact_problems": ["'We broke our test data' is not in the author facts."]
+    }
+    llm = FakeLLM(
+        {"writer": f"<post>{CLEAN_POST}</post>", "editor": seq(invented, review(9, CLEAN_POST))}
+    )
+    result = generate_post(llm, Config(), brief())
+    assert result.success
+    assert len(result.attempts) == 2
+    assert "unsupported claim" in result.attempts[0].problems[0]
+    second_prompt = [c for c in llm.calls if c["label"] == "writer"][1]["prompt"]
+    assert "not in the author facts" in second_prompt
