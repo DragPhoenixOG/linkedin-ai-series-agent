@@ -7,13 +7,17 @@ unsupported facts, and returns a rewritten version.
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass, field
 from typing import Any
 
 from agent.config import Config
 from agent.llm import LLM
+from agent.logs import log_event
 from agent.templates import fragment, render
 from agent.writer import PostBrief, format_recent_posts, tidy_post
+
+logger = logging.getLogger(__name__)
 
 EDITOR_SCHEMA: dict[str, Any] = {
     "type": "object",
@@ -58,6 +62,11 @@ class EditorReview:
     fact_problems: list[str] = field(default_factory=list)
     rule_problems: list[str] = field(default_factory=list)
     verdict: str = ""
+
+    def is_complete(self, humorous: bool) -> bool:
+        """A real review: scores in 1-10 and a rewrite (not an empty template)."""
+        humour_ok = not humorous or 1 <= (self.humour_score or 0) <= 10
+        return 1 <= self.human_score <= 10 and bool(self.rewrite) and humour_ok
 
     def feedback(self) -> list[str]:
         """Editor findings phrased as items the writer must fix."""
@@ -112,13 +121,19 @@ def edit_draft(llm: LLM, config: Config, brief: PostBrief, draft: str) -> Editor
         max_hashtags=config.max_hashtags,
         constraints="\n".join(f"- {c}" for c in brief.constraints()),
     )
-    data, _ = llm.complete_json(
-        label="editor",
-        model=config.editor_model,
-        system=[brief.voice.system_block(), render("system_editor")],
-        prompt=prompt,
-        effort=config.editor_effort,
-        max_tokens=16000,
-        json_schema=EDITOR_SCHEMA,
-    )
+    request = {
+        "model": config.editor_model,
+        "system": [brief.voice.system_block(), render("system_editor")],
+        "effort": config.editor_effort,
+        "max_tokens": 16000,
+        "json_schema": EDITOR_SCHEMA,
+    }
+    data, _ = llm.complete_json(label="editor", prompt=prompt, **request)
+    review = parse_review(data, humorous)
+    if review.is_complete(humorous):
+        return review
+    # Weaker models sometimes return the JSON shape with zeros and blanks. Ask once more.
+    log_event(logger, "editor.incomplete", logging.WARNING, score=review.human_score)
+    retry_prompt = f"{prompt}\n\n{fragment('editor_incomplete')}"
+    data, _ = llm.complete_json(label="editor.retry", prompt=retry_prompt, **request)
     return parse_review(data, humorous)

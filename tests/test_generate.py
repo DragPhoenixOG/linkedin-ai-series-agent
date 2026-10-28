@@ -6,7 +6,7 @@ from agent.config import Config
 from agent.generate import generate_post
 from conftest import CLEAN_POST
 from fakes import FakeLLM, seq
-from test_writer_editor import brief
+from test_writer_editor import EMPTY_TEMPLATE, brief
 
 BAD_POST = CLEAN_POST.replace("boring engineering", "robust engineering")
 
@@ -113,3 +113,18 @@ def test_unsupported_claims_force_another_round_even_with_a_good_score() -> None
     assert "unsupported claim" in result.attempts[0].problems[0]
     second_prompt = [c for c in llm.calls if c["label"] == "writer"][1]["prompt"]
     assert "not in the author facts" in second_prompt
+
+
+def test_incomplete_review_is_reported_as_such() -> None:
+    llm = FakeLLM(
+        {
+            "writer": f"<post>{CLEAN_POST}</post>",
+            "editor": seq(EMPTY_TEMPLATE, review(9, CLEAN_POST)),
+            "editor.retry": EMPTY_TEMPLATE,
+        }
+    )
+    result = generate_post(llm, Config(), brief())
+    assert result.success
+    assert result.attempts[0].problems == [
+        "The editor returned an incomplete review (no scores or no rewrite)."
+    ]

@@ -62,6 +62,8 @@ class GenerationResult:
 
 def score_problems(review: EditorReview, brief: PostBrief, config: Config) -> list[str]:
     """Editor-score gates as human-readable problems."""
+    if not review.is_complete(brief.tone == "humorous"):
+        return ["The editor returned an incomplete review (no scores or no rewrite)."]
     problems = []
     if review.human_score < config.min_editor_score:
         problems.append(

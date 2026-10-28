@@ -173,7 +173,7 @@ def test_compat_client_errors_fail_fast(status: int, message: str, error_type: t
         return httpx.Response(status, json={"error": {"message": "nope"}})
 
     with pytest.raises(error_type, match=message) as info:
-        ask(compat(handler))
+        ask(compat(handler, fallback_model=""))
     assert len(calls) == 1
     assert "key-123" not in str(info.value)
 
@@ -419,3 +419,27 @@ def test_fallback_can_be_turned_off() -> None:
     with pytest.raises(LLMError, match="still failing"):
         ask(llm)
     assert set(seen) == {"gemini-3.8-flash"}
+
+
+def test_unknown_model_falls_back_and_stays_there() -> None:
+    seen: list[str] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        model = json.loads(request.content)["model"]
+        seen.append(model)
+        if model == "gemini-3.8-flash":
+            return httpx.Response(404, json={"error": {"message": "model not found"}})
+        return httpx.Response(200, json=chat_reply(f"from {model}"))
+
+    llm = compat(handler, fallback_model="gemini-3.5-flash-lite")
+    assert ask(llm).text == "from gemini-3.5-flash-lite"
+    assert ask(llm).text == "from gemini-3.5-flash-lite"
+    assert seen == ["gemini-3.8-flash", "gemini-3.5-flash-lite", "gemini-3.5-flash-lite"]
+
+
+def test_unknown_fallback_model_still_fails_clearly() -> None:
+    llm = compat(
+        lambda r: httpx.Response(404, json={"error": {"message": "nope"}}), fallback_model="gone"
+    )
+    with pytest.raises(LLMError, match="--check"):
+        ask(llm)
