@@ -225,7 +225,8 @@ and variable.
 
 - **Free tiers have limits and change.** Providers adjust free models and rate limits often; a
   model can be renamed or retired. The **check** run catches a missing model, and a failed run
-  opens an issue. Google's terms let it use free-tier prompts and responses to improve its
+  opens an issue. Popular free models are sometimes "overloaded": the agent retries, then
+  switches to `fallback_model` (a lighter model) for the rest of that run. Google's terms let it use free-tier prompts and responses to improve its
   products; the posts are public anyway, but don't put anything private in the prompts.
 - **Research is only as good as the feeds.** The agent sees what `content/feeds.yaml` and Hacker
   News surface. Feeds sometimes move or break (they're skipped, and **check** shows them).

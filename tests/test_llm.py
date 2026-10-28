@@ -350,3 +350,72 @@ def test_anthropic_usage_and_cost() -> None:
     )
     ask(llm, model="claude-sonnet-5-5")
     assert llm.usage.cost_usd == pytest.approx(3.0)  # $2 input + $1 output
+
+
+# --- Overload fallback ---------------------------------------------------------------------------
+
+
+def overloaded_then_ok(seen: list[str], failures: int, error: str = "503"):
+    """Fail `failures` times on the primary model, then answer with the model that was used."""
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        model = json.loads(request.content)["model"]
+        seen.append(model)
+        if model == "gemini-3.8-flash" and len([m for m in seen if m == model]) <= failures:
+            if error == "timeout":
+                raise httpx.ReadTimeout("hung", request=request)
+            return httpx.Response(503, json={"error": {"message": "high demand"}})
+        return httpx.Response(200, json=chat_reply(f"from {model}"))
+
+    return handler
+
+
+def test_overloaded_model_switches_to_fallback_and_stays_there() -> None:
+    seen: list[str] = []
+    sleeps: list[float] = []
+    llm = compat(
+        overloaded_then_ok(seen, failures=99), sleeps, fallback_model="gemini-3.5-flash-lite"
+    )
+    assert ask(llm).text == "from gemini-3.5-flash-lite"
+    assert seen == ["gemini-3.8-flash", "gemini-3.8-flash", "gemini-3.5-flash-lite"]
+    assert len(sleeps) == 1  # one backoff, then the switch
+    seen.clear()
+    assert ask(llm).text == "from gemini-3.5-flash-lite"
+    assert seen == ["gemini-3.5-flash-lite"]  # no time wasted on the overloaded model again
+
+
+def test_timeouts_count_as_overload() -> None:
+    seen: list[str] = []
+    llm = compat(
+        overloaded_then_ok(seen, failures=99, error="timeout"),
+        fallback_model="gemini-3.5-flash-lite",
+    )
+    assert ask(llm).text == "from gemini-3.5-flash-lite"
+
+
+def test_one_overload_is_just_retried() -> None:
+    seen: list[str] = []
+    llm = compat(overloaded_then_ok(seen, failures=1), fallback_model="gemini-3.5-flash-lite")
+    assert ask(llm).text == "from gemini-3.8-flash"
+    assert seen == ["gemini-3.8-flash", "gemini-3.8-flash"]
+
+
+def test_rate_limits_do_not_switch_models() -> None:
+    seen: list[str] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen.append(json.loads(request.content)["model"])
+        if len(seen) <= 3:
+            return httpx.Response(429, headers={"retry-after": "1"})
+        return httpx.Response(200, json=chat_reply("ok"))
+
+    ask(compat(handler, fallback_model="gemini-3.5-flash-lite"))
+    assert set(seen) == {"gemini-3.8-flash"}
+
+
+def test_fallback_can_be_turned_off() -> None:
+    seen: list[str] = []
+    llm = compat(overloaded_then_ok(seen, failures=99), fallback_model="")
+    with pytest.raises(LLMError, match="still failing"):
+        ask(llm)
+    assert set(seen) == {"gemini-3.8-flash"}

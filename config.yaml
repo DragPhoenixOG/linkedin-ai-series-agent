@@ -19,6 +19,9 @@ research_model: gemini-3.5-flash-lite  # groq: openai/gpt-oss-120b   anthropic: 
 llm_base_url: ""                    # optional override for any OpenAI-compatible endpoint
 llm_api_key_env: ""                 # optional override for the env var holding the key
 max_output_tokens: 8192             # cap per call; on the Groq free tier use ~2000
+fallback_model: gemini-3.5-flash-lite  # used for the rest of a run if a model keeps saying "overloaded"
+                                    # ("" to turn off)   groq: openai/gpt-oss-20b
+llm_timeout_seconds: 90             # give up on a single request after this long, then retry
 writer_effort: high                 # anthropic only: output_config.effort
 editor_effort: high                 # anthropic only
 research_effort: medium             # anthropic only
