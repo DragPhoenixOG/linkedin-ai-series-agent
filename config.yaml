@@ -5,24 +5,35 @@
 post_interval_days: 3
 post_time_utc: "03:30"            # the workflow cron runs daily at this time (9:00 AM IST)
 
-# --- Claude API -----------------------------------------------------------
-writer_model: claude-sonnet-5-5
-editor_model: claude-sonnet-5-5
-research_model: claude-sonnet-5-5   # research, news scan, fact checks and topic proposals
-writer_effort: high                 # output_config.effort: low | medium | high | xhigh | max
-editor_effort: high
-research_effort: medium             # lower effort = fewer, more consolidated searches
-web_search_tool: web_search_20260318  # current version per the web search tool docs (Oct 2026)
-research_max_searches: 5
-news_max_searches: 8
-verify_max_searches: 4
-research_lookback_days: 45          # how far back "recent" goes for skill-post research
-refusal_fallback: true              # server-side fallbacks: "default" on a safety decline
+# --- Language model ---------------------------------------------------------
+# Which provider writes and edits the posts. gemini and groq have free tiers; anthropic is paid.
+#   gemini:    key in GEMINI_API_KEY (free at aistudio.google.com)
+#   groq:      key in GROQ_API_KEY (free at console.groq.com)
+#   anthropic: key in ANTHROPIC_API_KEY (prepaid credit at platform.claude.com)
+# Switching provider means changing llm_provider and the three model names below.
+# Run `python -m agent.main --check` to confirm the models exist for your key.
+llm_provider: gemini
+writer_model: gemini-3.8-flash      # groq: openai/gpt-oss-120b   anthropic: claude-sonnet-5-5
+editor_model: gemini-3.8-flash      # groq: openai/gpt-oss-120b   anthropic: claude-sonnet-5-5
+research_model: gemini-3.5-flash-lite  # groq: openai/gpt-oss-120b   anthropic: claude-sonnet-5-5
+llm_base_url: ""                    # optional override for any OpenAI-compatible endpoint
+llm_api_key_env: ""                 # optional override for the env var holding the key
+max_output_tokens: 8192             # cap per call; on the Groq free tier use ~2000
+writer_effort: high                 # anthropic only: output_config.effort
+editor_effort: high                 # anthropic only
+research_effort: medium             # anthropic only
+refusal_fallback: true              # anthropic only: server-side fallbacks on a safety decline
 
-# Prices in USD per 1M tokens, used only for the cost estimate in the run summary.
+# Prices in USD per 1M tokens, only for the cost estimate in the run summary. Free tiers: none.
 pricing:
   claude-sonnet-5-5: {input: 2.00, output: 10.00, cache_write: 2.50, cache_read: 0.20}
-  web_search_per_1k: 10.00
+
+# --- Research sources (free, no keys) ---------------------------------------
+# RSS feeds and Hacker News search, listed in content/feeds.yaml.
+research_lookback_days: 45          # how far back "recent" goes for skill-post research
+max_articles_to_read: 6             # articles fetched and given to the model per research step
+article_max_chars: 5000             # text kept per article; on the Groq free tier use ~2500
+fetch_timeout_seconds: 15
 
 # --- Post shape (section 4) ----------------------------------------------
 min_words: 120
@@ -42,6 +53,7 @@ max_attempts: 3
 news_post_ratio: 0.33
 news_lookback_days: 7
 news_recent_window: 10              # "already covered in the last 10 posts"
+news_max_headlines: 60              # headlines the news scan reads; on the Groq free tier use ~25
 big_news_check: true                # on skill days, a major verified story may jump the queue
 humour_ratio: 0.33
 

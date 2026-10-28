@@ -34,9 +34,10 @@ from agent.linkedin import (
     PostContent,
     token_status,
 )
-from agent.llm import LLM, LLMError
+from agent.llm import LLM, LLMError, OpenAICompatLLM, create_llm, provider_settings
 from agent.logs import log_event, setup_logging
 from agent.notify import Notifier, NotifyError
+from agent.sources import SourceClient, load_source_settings
 from agent.state import (
     History,
     NewsStory,
@@ -95,6 +96,9 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--root", type=Path, default=Path.cwd(), help="repository root")
     parser.add_argument("--output", type=Path, help="also write the dry-run report to this file")
     parser.add_argument("--log-level", default="INFO")
+    parser.add_argument(
+        "--check", action="store_true", help="check API key, models and feeds, then exit"
+    )
     args = parser.parse_args(argv)
     if args.topic_id and args.post_type == mix.NEWS:
         parser.error("--topic-id only applies to skill posts")
@@ -103,6 +107,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 
 def plan_post(
     llm: LLM,
+    sources: SourceClient,
     config: Config,
     history: History,
     backlog: list[topics.Topic],
@@ -123,7 +128,7 @@ def plan_post(
     post_type = override_type or mix.decide_post_type(recent_types, config.news_post_ratio, rng)
     story: NewsStory | None = None
     if post_type == mix.NEWS:
-        story = news.pick_story(llm, config, today, history)
+        story = news.pick_story(llm, config, sources, today, history)
         if story is None:
             post_type = mix.SKILL
             notes.append(
@@ -135,7 +140,7 @@ def plan_post(
         and recent_types
         and recent_types[0] != mix.NEWS
     ):
-        story = news.pick_story(llm, config, today, history, require_major=True)
+        story = news.pick_story(llm, config, sources, today, history, require_major=True)
         if story:
             post_type = mix.NEWS
             notes.append("a major verified story jumped the queue")
@@ -165,7 +170,7 @@ def plan_post(
         if plan.topic is None:
             raise topics.BacklogError("No pending topics left. Add topics to content/topics.yaml.")
         plan.findings = research.research_topic(
-            llm, config, plan.topic.title, plan.topic.angle, today
+            llm, config, sources, plan.topic.title, plan.topic.angle, today
         )
     return plan
 
@@ -260,13 +265,23 @@ def linkedin_from_env(config: Config) -> LinkedInClient:
     )
 
 
+def sources_from_config(config: Config, root: Path) -> SourceClient:
+    """Feeds and Hacker News, as listed in `content/feeds.yaml`."""
+    return SourceClient(
+        load_source_settings(root / "content" / "feeds.yaml"),
+        timeout=config.fetch_timeout_seconds,
+        max_chars=config.article_max_chars,
+    )
+
+
 @dataclass
 class Services:
     """External systems, swappable in tests."""
 
-    llm_factory: Callable[[Config], LLM] = LLM.from_env
+    llm_factory: Callable[[Config], LLM] = create_llm
     linkedin_factory: Callable[[Config], LinkedInClient] = linkedin_from_env
     notifier_factory: Callable[[], Notifier] = notify.notifier_from_env
+    sources_factory: Callable[[Config, Path], SourceClient] = sources_from_config
 
 
 @dataclass
@@ -282,6 +297,7 @@ class Context:
     backlog: list[topics.Topic]
     services: Services
     llm: LLM | None = None
+    sources: SourceClient | None = None
 
     @property
     def history_path(self) -> Path:
@@ -295,6 +311,11 @@ class Context:
         if self.llm is None:
             self.llm = self.services.llm_factory(self.config)
         return self.llm
+
+    def get_sources(self) -> SourceClient:
+        if self.sources is None:
+            self.sources = self.services.sources_factory(self.config, self.root)
+        return self.sources
 
     def usage(self) -> str:
         return self.llm.usage.summary() if self.llm else "calls=0"
@@ -465,7 +486,14 @@ def generate(ctx: Context) -> tuple[Plan, GenerationResult]:
     llm = ctx.get_llm()
     seed = ctx.args.seed if ctx.args.seed is not None else int(ctx.today.strftime("%Y%m%d"))
     plan = plan_post(
-        llm, ctx.config, ctx.history, ctx.backlog, ctx.today, random.Random(seed), ctx.args
+        llm,
+        ctx.get_sources(),
+        ctx.config,
+        ctx.history,
+        ctx.backlog,
+        ctx.today,
+        random.Random(seed),
+        ctx.args,
     )
     log_event(
         logger,
@@ -632,12 +660,62 @@ def run(
         services=services or Services(),
     )
     try:
+        if args.check:
+            return check(ctx, out)
         if args.dry_run or config.dry_run:
             return dry_run(ctx, out)
         return live_run(ctx)
     except LLMError as exc:  # e.g. no API key: nothing else can happen this run
         log_event(logger, "run.summary", logging.ERROR, status="failed", error=exc)
         return EXIT_USAGE
+
+
+def check(ctx: Context, out: TextIO) -> int:
+    """Setup check: API key, model names and feeds. Changes nothing."""
+    config = ctx.config
+    _, key_env = provider_settings(config)
+    lines = [f"Provider: {config.llm_provider} (key in {key_env})"]
+    problems = 0
+    try:
+        llm = ctx.services.llm_factory(config)
+        lines.append(f"  API key: found in {key_env}")
+    except LLMError as exc:
+        llm = None
+        problems += 1
+        lines.append(f"  API key: PROBLEM: {exc}")
+    models = {config.writer_model, config.editor_model, config.research_model}
+    if isinstance(llm, OpenAICompatLLM):
+        try:
+            available = set(llm.list_models())
+            for model in sorted(models):
+                found = model in available
+                problems += 0 if found else 1
+                lines.append(
+                    f"  model {model}: {'available' if found else 'NOT FOUND for this key'}"
+                )
+            if problems:
+                lines.append(f"  available models: {', '.join(sorted(available)) or '(none)'}")
+        except LLMError as exc:
+            problems += 1
+            lines.append(f"  models: could not list ({exc})")
+    else:
+        reason = "no API key" if llm is None else "not checked for this provider"
+        lines.append(f"  models: {', '.join(sorted(models))} ({reason})")
+
+    sources = ctx.get_sources()
+    sources.all_feed_items()
+    lines.append("Feeds:")
+    for name, status in sources.feed_status.items():
+        lines.append(f"  {name}: {status}")
+    reachable = sum(1 for s in sources.feed_status.values() if s != "unreachable")
+    hn = sources.search_hn("AI", ctx.today - timedelta(days=7), 100, limit=5)
+    lines.append(f"Hacker News search: {len(hn)} results for 'AI' in the last 7 days")
+    if not reachable and not hn:
+        problems += 1
+        lines.append("  PROBLEM: no research source is reachable")
+    lines.append("All good." if not problems else f"{problems} problem(s) found.")
+    out.write("\n".join(lines) + "\n")
+    return EXIT_OK if not problems else EXIT_USAGE
 
 
 def cli(argv: list[str] | None = None) -> int:

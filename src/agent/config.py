@@ -16,19 +16,23 @@ class Config:
     post_interval_days: int = 3
     post_time_utc: str = "03:30"
 
-    writer_model: str = "claude-sonnet-5-5"
-    editor_model: str = "claude-sonnet-5-5"
-    research_model: str = "claude-sonnet-5-5"
+    llm_provider: str = "gemini"
+    writer_model: str = "gemini-3.8-flash"
+    editor_model: str = "gemini-3.8-flash"
+    research_model: str = "gemini-3.5-flash-lite"
+    llm_base_url: str = ""
+    llm_api_key_env: str = ""
+    max_output_tokens: int = 8192
     writer_effort: str = "high"
     editor_effort: str = "high"
     research_effort: str = "medium"
-    web_search_tool: str = "web_search_20260318"
-    research_max_searches: int = 5
-    news_max_searches: int = 8
-    verify_max_searches: int = 4
-    research_lookback_days: int = 45
     refusal_fallback: bool = True
     pricing: dict[str, Any] = field(default_factory=dict)
+
+    research_lookback_days: int = 45
+    max_articles_to_read: int = 6
+    article_max_chars: int = 5000
+    fetch_timeout_seconds: int = 15
 
     min_words: int = 120
     max_words: int = 250
@@ -45,6 +49,7 @@ class Config:
     news_post_ratio: float = 0.33
     news_lookback_days: int = 7
     news_recent_window: int = 10
+    news_max_headlines: int = 60
     big_news_check: bool = True
     humour_ratio: float = 0.33
 
