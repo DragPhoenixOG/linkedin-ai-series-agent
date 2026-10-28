@@ -98,3 +98,58 @@ class FakeClient:
     def __init__(self, handler: Callable[[dict[str, Any]], Any]) -> None:
         self.messages = FakeMessages(handler)
         self.beta = SimpleNamespace(messages=self.messages)
+
+
+class FakeLinkedIn:
+    """Stands in for `agent.linkedin.LinkedInClient`."""
+
+    def __init__(self, error: Exception | None = None) -> None:
+        self.error = error
+        self.posts: list[str] = []
+
+    def create_post(self, content: Any) -> Any:
+        from agent.linkedin import PublishedPost
+
+        if self.error:
+            raise self.error
+        self.posts.append(content.text)
+        return PublishedPost(urn=f"urn:li:share:{len(self.posts)}")
+
+
+class FakeNotifier:
+    """Stands in for `agent.notify.GitHubNotifier`; keeps issues in memory."""
+
+    def __init__(self) -> None:
+        self.issues: dict[int, dict[str, Any]] = {}
+        self.comments: list[tuple[int, str]] = []
+
+    def create_issue(self, title: str, body: str, labels: list[str]) -> int:
+        number = len(self.issues) + 1
+        self.issues[number] = {
+            "title": title,
+            "body": body,
+            "labels": list(labels),
+            "state": "open",
+        }
+        return number
+
+    def find_open_issue(self, label: str, title: str | None = None) -> int | None:
+        for number, issue in self.issues.items():
+            matches_title = title is None or issue["title"] == title
+            if issue["state"] == "open" and label in issue["labels"] and matches_title:
+                return number
+        return None
+
+    def update_issue(self, number: int, title: str, body: str) -> None:
+        self.issues[number].update(title=title, body=body)
+
+    def comment_and_close(self, number: int, comment: str) -> None:
+        self.comments.append((number, comment))
+        self.issues[number]["state"] = "closed"
+
+    def issue_state(self, number: int) -> tuple[str, list[str]] | None:
+        issue = self.issues.get(number)
+        return (issue["state"], issue["labels"]) if issue else None
+
+    def titles(self, label: str | None = None) -> list[str]:
+        return [i["title"] for i in self.issues.values() if label is None or label in i["labels"]]

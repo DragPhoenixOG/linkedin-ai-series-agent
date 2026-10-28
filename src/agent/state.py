@@ -106,10 +106,32 @@ class PostRecord:
 
 
 @dataclass
+class PendingDraft:
+    """A finished post waiting out the review window (`review_window_hours` > 0)."""
+
+    record: PostRecord
+    created_at: str  # ISO datetime, UTC
+    publish_after: str  # ISO datetime, UTC
+    issue_number: int | None = None
+    research_notes: str = ""
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> PendingDraft:
+        return cls(
+            record=PostRecord.from_dict(data["record"]),
+            created_at=data["created_at"],
+            publish_after=data["publish_after"],
+            issue_number=data.get("issue_number"),
+            research_notes=data.get("research_notes", ""),
+        )
+
+
+@dataclass
 class History:
-    """All published posts, oldest first."""
+    """All published posts, oldest first, plus at most one draft awaiting review."""
 
     posts: list[PostRecord] = field(default_factory=list)
+    pending: PendingDraft | None = None
 
     def last_post(self) -> PostRecord | None:
         """The most recently published post, if any."""
@@ -134,13 +156,21 @@ def load_history(path: Path) -> History:
     if not path.exists():
         return History()
     data = json.loads(path.read_text(encoding="utf-8") or "{}")
-    return History(posts=[PostRecord.from_dict(p) for p in data.get("posts", [])])
+    pending = data.get("pending")
+    return History(
+        posts=[PostRecord.from_dict(p) for p in data.get("posts", [])],
+        pending=PendingDraft.from_dict(pending) if pending else None,
+    )
 
 
 def save_history(history: History, path: Path) -> None:
     """Write history as stable, human-readable JSON."""
     path.parent.mkdir(parents=True, exist_ok=True)
-    payload = {"posts": [asdict(p) for p in sorted(history.posts, key=lambda p: p.date)]}
+    payload: dict[str, Any] = {
+        "posts": [asdict(p) for p in sorted(history.posts, key=lambda p: p.date)]
+    }
+    if history.pending:
+        payload["pending"] = asdict(history.pending)
     path.write_text(json.dumps(payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
 
 

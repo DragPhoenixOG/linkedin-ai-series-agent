@@ -1,33 +1,53 @@
-"""Entry point: decide, research, write, check and (eventually) publish one post.
+"""Entry point: decide, research, write, check and publish one post.
 
 Usage:
+    python -m agent.main                      # what the daily workflow runs
     python -m agent.main --dry-run --force
     python -m agent.main --dry-run --force --post-type news --tone humorous
 
-`--dry-run` prints the final post plus lint and editor results. It never posts, commits, or
-writes to `state/`, `content/` or `posts/`.
+`--dry-run` prints the final post plus lint and editor results. It never posts, opens issues,
+commits, or writes to `state/`, `content/` or `posts/`.
 """
 
 from __future__ import annotations
 
 import argparse
 import logging
+import os
 import random
 import sys
 from collections.abc import Callable
 from dataclasses import dataclass, field
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, time, timedelta
 from pathlib import Path
-from typing import TextIO
+from typing import Any, TextIO
 
 from dotenv import load_dotenv
 
-from agent import mix, news, research, scheduler, topics
+from agent import mix, news, notify, research, scheduler, topics
 from agent.config import Config, load_config
 from agent.generate import GenerationResult, generate_post
+from agent.linkedin import (
+    LinkedInAuthError,
+    LinkedInClient,
+    LinkedInError,
+    PostContent,
+    token_status,
+)
 from agent.llm import LLM, LLMError
 from agent.logs import log_event, setup_logging
-from agent.state import History, NewsStory, Source, load_history
+from agent.notify import Notifier, NotifyError
+from agent.state import (
+    History,
+    NewsStory,
+    PendingDraft,
+    PostRecord,
+    Source,
+    archive_post,
+    load_history,
+    make_slug,
+    save_history,
+)
 from agent.writer import PostBrief, load_voice
 
 logger = logging.getLogger("agent")
@@ -231,78 +251,258 @@ def render_report(
     return "\n".join(lines)
 
 
-def run(
-    args: argparse.Namespace,
-    llm_factory: Callable[[Config], LLM] = LLM.from_env,
-    out: TextIO = sys.stdout,
-) -> int:
-    """Run the agent once. Returns a process exit code."""
-    root: Path = args.root
-    load_dotenv(root / ".env")
-    config = load_config(root / "config.yaml")
-    dry_run = args.dry_run or config.dry_run
-    today = args.date or datetime.now(UTC).date()
-    history = load_history(root / "state" / "history.json")
-    backlog = topics.load_topics(root / "content" / "topics.yaml")
-
-    last = history.last_post()
-    decision = scheduler.decide(
-        today, last.posted_on if last else None, config.post_interval_days, force=args.force
+def linkedin_from_env(config: Config) -> LinkedInClient:
+    """LinkedIn client from `LINKEDIN_ACCESS_TOKEN` and `LINKEDIN_PERSON_URN`."""
+    return LinkedInClient(
+        os.environ.get("LINKEDIN_ACCESS_TOKEN", ""),
+        os.environ.get("LINKEDIN_PERSON_URN", ""),
+        config.linkedin_api_version,
     )
-    log_event(logger, "schedule", should_post=decision.should_post, reason=decision.reason)
-    if not decision.should_post:
-        log_event(logger, "run.summary", status="skipped", reason=decision.reason)
-        return EXIT_OK
-    if not dry_run:
-        log_event(
-            logger,
-            "run.summary",
-            logging.ERROR,
-            status="not_implemented",
-            reason="LinkedIn publishing arrives in build step 6; run with --dry-run",
-        )
-        return EXIT_USAGE
 
+
+@dataclass
+class Services:
+    """External systems, swappable in tests."""
+
+    llm_factory: Callable[[Config], LLM] = LLM.from_env
+    linkedin_factory: Callable[[Config], LinkedInClient] = linkedin_from_env
+    notifier_factory: Callable[[], Notifier] = notify.notifier_from_env
+
+
+@dataclass
+class Context:
+    """Everything one run works with."""
+
+    args: argparse.Namespace
+    config: Config
+    root: Path
+    today: date
+    now: datetime
+    history: History
+    backlog: list[topics.Topic]
+    services: Services
+    llm: LLM | None = None
+
+    @property
+    def history_path(self) -> Path:
+        return self.root / "state" / "history.json"
+
+    @property
+    def topics_path(self) -> Path:
+        return self.root / "content" / "topics.yaml"
+
+    def get_llm(self) -> LLM:
+        if self.llm is None:
+            self.llm = self.services.llm_factory(self.config)
+        return self.llm
+
+    def usage(self) -> str:
+        return self.llm.usage.summary() if self.llm else "calls=0"
+
+
+def make_record(plan: Plan, result: GenerationResult, today: date) -> PostRecord:
+    """The history entry for the chosen post (before it has a LinkedIn URN)."""
+    best = result.best
+    return PostRecord(
+        date=today.isoformat(),
+        post_type=plan.post_type,
+        tone=plan.tone,
+        format=plan.format.id,
+        text=best.text,
+        slug=make_slug(plan.title),
+        topic_id=plan.topic.id if plan.topic else None,
+        topic_title=plan.topic.title if plan.topic else None,
+        news_story=plan.story,
+        sources=plan.sources,
+        editor_score=best.review.human_score,
+        humour_score=best.review.humour_score,
+        attempts=len(result.attempts),
+    )
+
+
+def write_outputs(**values: str) -> None:
+    """Expose values to later workflow steps (GitHub Actions `GITHUB_OUTPUT`)."""
+    path = os.environ.get("GITHUB_OUTPUT")
+    if not path:
+        return
+    with open(path, "a", encoding="utf-8") as handle:
+        for key, value in values.items():
+            handle.write(f"{key}={value}\n")
+
+
+def safely(action: Callable[..., Any], *args: Any) -> Any:
+    """Run a notification; a GitHub hiccup must never undo or block a published post."""
     try:
-        llm = llm_factory(config)
-    except LLMError as exc:
+        return action(*args)
+    except NotifyError as exc:
+        log_event(logger, "notify.failed", logging.WARNING, error=exc)
+        return None
+
+
+def check_token_expiry(ctx: Context, notifier: Notifier) -> None:
+    """Every live run: open or update the reminder issue when the token is about to expire."""
+    status = token_status(
+        os.environ.get("LINKEDIN_TOKEN_EXPIRES_ON"), ctx.today, ctx.config.token_warning_days
+    )
+    if status is None:
+        log_event(
+            logger,
+            "token.unknown",
+            logging.WARNING,
+            reason="LINKEDIN_TOKEN_EXPIRES_ON is not set (YYYY-MM-DD); no expiry reminders",
+        )
+        return
+    log_event(logger, "token", expires_on=status.expires_on, days_left=status.days_left)
+    if status.warn:
+        safely(notify.remind_token_expiry, notifier, status)
+
+
+def top_up_backlog(ctx: Context, notifier: Notifier, research_notes: str) -> None:
+    """After a post: ask Claude for new topics if fewer than `min_pending_topics` remain."""
+    if not topics.needs_extension(ctx.backlog, ctx.config.min_pending_topics):
+        return
+    covered = [p.title for p in ctx.history.posts]
+    try:
+        llm = ctx.get_llm()
+        topics.ensure_backlog(
+            ctx.backlog,
+            enabled=ctx.config.auto_extend_topics,
+            min_pending=ctx.config.min_pending_topics,
+            propose=lambda: topics.propose_topics(
+                llm, ctx.config, ctx.backlog, covered, research_notes, ctx.today
+            ),
+            covered_titles=covered,
+        )
+    except (topics.BacklogError, LLMError) as exc:
+        safely(
+            notify.notify_failure,
+            notifier,
+            f"Topic backlog needs attention ({ctx.today.isoformat()})",
+            [str(exc), "Add topics to content/topics.yaml or check the Anthropic API key."],
+        )
+
+
+def publish_record(
+    ctx: Context,
+    record: PostRecord,
+    research_notes: str,
+    linkedin: LinkedInClient,
+    notifier: Notifier,
+    scheduled_issue: int | None = None,
+) -> int:
+    """Post to LinkedIn, then record it everywhere. State is saved before anything optional."""
+    record.date = ctx.today.isoformat()
+    try:
+        post = linkedin.create_post(PostContent(record.text))
+    except LinkedInAuthError as exc:
+        safely(notify.notify_token_failure, notifier, str(exc), ctx.today)
         log_event(logger, "run.summary", logging.ERROR, status="failed", error=exc)
-        return EXIT_USAGE
-    rng = random.Random(args.seed if args.seed is not None else int(today.strftime("%Y%m%d")))
-    try:
-        plan = plan_post(llm, config, history, backlog, today, rng, args)
-        log_event(
-            logger,
-            "plan",
-            type=plan.post_type,
-            tone=plan.tone,
-            format=plan.format.id,
-            subject=plan.title,
+        return EXIT_FAILED
+    except LinkedInError as exc:
+        safely(
+            notify.notify_failure,
+            notifier,
+            f"LinkedIn rejected the post: {record.title} ({record.date})",
+            [str(exc)],
+            record,
         )
-        result = generate_post(llm, config, build_brief(plan, history, root, today))
-    except (LLMError, topics.BacklogError, KeyError) as exc:
-        log_event(
-            logger,
-            "run.summary",
-            logging.ERROR,
-            status="failed",
-            error=exc,
-            usage=llm.usage.summary(),
-        )
+        log_event(logger, "run.summary", logging.ERROR, status="failed", error=exc)
         return EXIT_FAILED
 
+    record.urn, record.linkedin_url = post.urn, post.url
+    ctx.history.posts.append(record)
+    ctx.history.pending = None
+    save_history(ctx.history, ctx.history_path)  # first, so a later failure can't cause a repost
+    archive_post(record, ctx.root / "posts")
+    if record.topic_id:
+        topics.mark_posted(ctx.backlog, record.topic_id, ctx.today, post.url)
+    top_up_backlog(ctx, notifier, research_notes)
+    topics.save_topics(ctx.backlog, ctx.topics_path)
+    safely(notify.notify_posted, notifier, record)
+    if scheduled_issue is not None:
+        safely(notifier.comment_and_close, scheduled_issue, f"Published: {post.url}")
+    write_outputs(slug=record.slug, commit_message=f"chore: post {record.slug}", url=post.url)
+    log_event(
+        logger,
+        "run.summary",
+        status="posted",
+        type=record.post_type,
+        tone=record.tone,
+        format=record.format,
+        human=record.editor_score,
+        url=post.url,
+        usage=ctx.usage(),
+    )
+    return EXIT_OK
+
+
+def handle_pending(ctx: Context, linkedin: LinkedInClient, notifier: Notifier) -> int | None:
+    """Deal with a draft in the review window. Returns an exit code, or None to carry on."""
+    pending = ctx.history.pending
+    assert pending is not None
+    try:
+        rejected = notify.draft_rejected(notifier, pending.issue_number)
+    except NotifyError as exc:
+        log_event(logger, "run.summary", logging.WARNING, status="waiting", error=exc)
+        return EXIT_OK  # can't confirm it wasn't rejected: don't publish
+    if rejected:
+        ctx.history.pending = None
+        save_history(ctx.history, ctx.history_path)
+        write_outputs(commit_message=f"chore: drop rejected draft {pending.record.slug}")
+        log_event(logger, "review.rejected", slug=pending.record.slug)
+        return None
+    publish_after = datetime.fromisoformat(pending.publish_after)
+    if ctx.now < publish_after:
+        log_event(logger, "run.summary", status="waiting", publish_after=pending.publish_after)
+        return EXIT_OK
+    return publish_record(
+        ctx, pending.record, pending.research_notes, linkedin, notifier, pending.issue_number
+    )
+
+
+def generate(ctx: Context) -> tuple[Plan, GenerationResult]:
+    """Plan and write today's post. Raises LLMError/BacklogError/KeyError on failure."""
+    llm = ctx.get_llm()
+    seed = ctx.args.seed if ctx.args.seed is not None else int(ctx.today.strftime("%Y%m%d"))
+    plan = plan_post(
+        llm, ctx.config, ctx.history, ctx.backlog, ctx.today, random.Random(seed), ctx.args
+    )
+    log_event(
+        logger,
+        "plan",
+        type=plan.post_type,
+        tone=plan.tone,
+        format=plan.format.id,
+        subject=plan.title,
+    )
+    result = generate_post(llm, ctx.config, build_brief(plan, ctx.history, ctx.root, ctx.today))
+    return plan, result
+
+
+def dry_run(ctx: Context, out: TextIO) -> int:
+    """Write a post and print the report. No posting, no issues, no state changes."""
+    decision = _schedule(ctx)
+    if not decision.should_post:
+        return EXIT_OK
+    try:
+        plan, result = generate(ctx)
+    except (LLMError, topics.BacklogError, KeyError) as exc:
+        log_event(
+            logger, "run.summary", logging.ERROR, status="failed", error=exc, usage=ctx.usage()
+        )
+        return EXIT_FAILED
     report = render_report(
         plan,
         result,
-        today,
+        ctx.today,
         decision.reason,
-        backlog_after_post(plan, backlog, config),
-        llm.usage.summary(),
+        backlog_after_post(plan, ctx.backlog, ctx.config),
+        ctx.usage(),
     )
     out.write(report)
-    if args.output:
-        args.output.parent.mkdir(parents=True, exist_ok=True)
-        args.output.write_text(report, encoding="utf-8")
+    if ctx.args.output:
+        ctx.args.output.parent.mkdir(parents=True, exist_ok=True)
+        ctx.args.output.write_text(report, encoding="utf-8")
     best = result.best
     log_event(
         logger,
@@ -316,11 +516,128 @@ def run(
         humour=best.review.humour_score if best.review.humour_score is not None else "-",
         lint="pass" if best.lint.passed else "fail",
         words=best.lint.word_count,
-        calls=llm.usage.calls,
-        searches=llm.usage.web_searches,
-        est_cost_usd=f"{llm.usage.cost_usd:.3f}",
+        usage=ctx.usage(),
     )
     return EXIT_OK if result.success else EXIT_FAILED
+
+
+def live_run(ctx: Context) -> int:
+    """The real thing: check the token, handle any scheduled draft, write and publish."""
+    notifier = ctx.services.notifier_factory()
+    check_token_expiry(ctx, notifier)
+    try:
+        linkedin = ctx.services.linkedin_factory(ctx.config)
+    except LinkedInError as exc:
+        safely(
+            notify.notify_failure,
+            notifier,
+            f"LinkedIn settings missing or invalid ({ctx.today.isoformat()})",
+            [str(exc)],
+        )
+        log_event(logger, "run.summary", logging.ERROR, status="failed", error=exc)
+        return EXIT_FAILED
+
+    if ctx.history.pending:
+        outcome = handle_pending(ctx, linkedin, notifier)
+        if outcome is not None:
+            return outcome
+
+    decision = _schedule(ctx)
+    if not decision.should_post:
+        return EXIT_OK
+    try:
+        plan, result = generate(ctx)
+    except (LLMError, topics.BacklogError, KeyError) as exc:
+        safely(
+            notify.notify_failure,
+            notifier,
+            f"Post needs attention ({ctx.today.isoformat()})",
+            [f"{type(exc).__name__}: {exc}"],
+        )
+        log_event(
+            logger, "run.summary", logging.ERROR, status="failed", error=exc, usage=ctx.usage()
+        )
+        return EXIT_FAILED
+
+    record = make_record(plan, result, ctx.today)
+    if not result.success:
+        safely(
+            notify.notify_failure,
+            notifier,
+            f"Post needs attention: {plan.title} ({ctx.today.isoformat()})",
+            [
+                f"Failed quality checks after {len(result.attempts)} attempts.",
+                *result.best.problems,
+            ],
+            record,
+        )
+        log_event(logger, "run.summary", logging.ERROR, status="quality_failed", usage=ctx.usage())
+        return EXIT_FAILED
+
+    if ctx.config.review_window_hours > 0:
+        publish_after = ctx.now + timedelta(hours=ctx.config.review_window_hours)
+        issue = safely(notify.notify_scheduled, notifier, record, publish_after.isoformat())
+        ctx.history.pending = PendingDraft(
+            record=record,
+            created_at=ctx.now.isoformat(),
+            publish_after=publish_after.isoformat(),
+            issue_number=issue,
+            research_notes=plan.research_notes,
+        )
+        save_history(ctx.history, ctx.history_path)
+        write_outputs(slug=record.slug, commit_message=f"chore: schedule {record.slug}")
+        log_event(
+            logger, "run.summary", status="scheduled", publish_after=publish_after.isoformat()
+        )
+        return EXIT_OK
+    return publish_record(ctx, record, plan.research_notes, linkedin, notifier)
+
+
+def _schedule(ctx: Context) -> scheduler.ScheduleDecision:
+    last = ctx.history.last_post()
+    decision = scheduler.decide(
+        ctx.today,
+        last.posted_on if last else None,
+        ctx.config.post_interval_days,
+        force=ctx.args.force,
+    )
+    log_event(logger, "schedule", should_post=decision.should_post, reason=decision.reason)
+    if not decision.should_post:
+        log_event(logger, "run.summary", status="skipped", reason=decision.reason)
+    return decision
+
+
+def run(
+    args: argparse.Namespace,
+    services: Services | None = None,
+    out: TextIO = sys.stdout,
+) -> int:
+    """Run the agent once. Returns a process exit code."""
+    root: Path = args.root
+    load_dotenv(root / ".env")
+    config = load_config(root / "config.yaml")
+    if args.date:
+        today, now = args.date, datetime.combine(args.date, time(12, 0), tzinfo=UTC)
+    else:
+        now = datetime.now(UTC)
+        today = now.date()
+    ctx = Context(
+        args=args,
+        config=config,
+        root=root,
+        today=today,
+        now=now,
+        history=load_history(root / "state" / "history.json"),
+        backlog=topics.load_topics(root / "content" / "topics.yaml"),
+        services=services or Services(),
+    )
+    try:
+        if args.dry_run or config.dry_run:
+            return dry_run(ctx, out)
+        return live_run(ctx)
+    except LLMError as exc:  # e.g. no API key: nothing else can happen this run
+        log_event(logger, "run.summary", logging.ERROR, status="failed", error=exc)
+        return EXIT_USAGE
 
 
 def cli(argv: list[str] | None = None) -> int:
