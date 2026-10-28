@@ -10,7 +10,7 @@ from pathlib import Path
 
 import pytest
 
-from agent.main import EXIT_FAILED, EXIT_OK, EXIT_USAGE, parse_args, run
+from agent.main import EXIT_FAILED, EXIT_OK, Services, parse_args, run
 from conftest import CLEAN_POST
 from fakes import FakeLLM
 from test_news import cand, verified
@@ -86,9 +86,13 @@ def go(root: Path, llm: FakeLLM | None, *argv: str) -> tuple[int, str]:
             raise AssertionError("the Claude API must not be called in this run")
         return llm
 
+    def forbidden(*_args):
+        raise AssertionError("dry runs must not touch LinkedIn or GitHub")
+
+    services = Services(llm_factory=factory, linkedin_factory=forbidden, notifier_factory=forbidden)
     code = run(
         parse_args(["--root", str(root), "--date", "2026-10-28", *argv]),
-        llm_factory=factory,
+        services=services,
         out=out,
     )
     return code, out.getvalue()
@@ -101,11 +105,6 @@ def test_not_a_posting_day_exits_cleanly_without_calling_claude(root: Path) -> N
     assert code == EXIT_OK
     assert output == ""
     assert snapshot(root) == before
-
-
-def test_publishing_is_refused_until_step_6(root: Path) -> None:
-    code, _ = go(root, None, "--force")
-    assert code == EXIT_USAGE
 
 
 def test_dry_run_skill_post_end_to_end_without_writes(root: Path) -> None:

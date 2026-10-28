@@ -52,5 +52,6 @@ new_topics_per_extension: 5
 
 # --- Publishing -------------------------------------------------------------
 review_window_hours: 0
-linkedin_api_version: "YYYYMM"      # set to a currently supported version in build step 6
+linkedin_api_version: "202610"      # LinkedIn Marketing API version (Oct 2026); supported >= 1 year
+token_warning_days: 7               # open a reminder issue this many days before the token expires
 dry_run: false

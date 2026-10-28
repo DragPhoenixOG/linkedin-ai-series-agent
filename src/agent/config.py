@@ -53,7 +53,8 @@ class Config:
     new_topics_per_extension: int = 5
 
     review_window_hours: int = 0
-    linkedin_api_version: str = "YYYYMM"
+    linkedin_api_version: str = "202610"
+    token_warning_days: int = 7
     dry_run: bool = False
 
 
