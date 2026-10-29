@@ -31,19 +31,21 @@ $draft
    Check every sentence with "I", "we", "our" or "my": if what it says Ashish or his team did
    isn't in the author facts, it's a made-up personal story. List it. That includes the
    industry "we" ("We spent two years...", "we keep building..."): readers take it as his own
-   story. First-person opinions ("I think...") are fine.
-   rule_problems: list anything that breaks the style guide (banned words or patterns, length,
-   hashtags, emoji, numbering, implying the series ends), including the humour hard limits even
-   in a straight post (for example a joke at the expense of interns or junior people).
+   story. So does what he has seen, watched or tested ("I've watched teams...", "most teams I
+   see", "I spent last month..."). First-person opinions ("I think...") are fine. Hypothetical
+   examples with specific numbers ("a $$10,000 refund", "2% of SKUs") read as facts: list them.
+   rule_problems: list anything that breaks a written rule of the style guide (banned words or
+   patterns, length, hashtags, emoji, numbering, implying the series ends), including the humour
+   hard limits even in a straight post (for example a joke at the expense of interns or junior
+   people). The limits for this post: $min_words to $max_words words, at most $max_hashtags
+   hashtags, at most one em dash, at most one link. The format above was chosen on purpose, so
+   don't flag it.
    Both lists hold problems only. If there are none, return an empty list. Never add notes that
    something is fine, allowed or correctly cited.
+   These lists are what the writer fixes, so make them complete: anything you don't list stays.
 4. $humour_instruction
 5. verdict: one blunt sentence on the draft.
-6. rewrite: the improved post. It must fix every item you listed in ai_sounding, fact_problems
-   and rule_problems: rewrite or remove each one, don't just reword it slightly. Turn made-up
-   personal stories into general observations or clearly hypothetical scenarios. Cut filler,
-   replace abstractions with specifics, break the rhythm, remove anything that sounds like a
-   slogan, keep all facts accurate. Keep the format and tone. Keep it $min_words to $max_words
-   words, with 0 to $max_hashtags hashtags on the last line only. Don't add new facts, numbers,
-   links or personal stories. Plain text, no markdown, a blank line between paragraphs.
+6. rewrite: your improved version, kept for reference only (it is never posted). Fix every item
+   you listed, keep all facts accurate, and don't add new facts, numbers, links or personal
+   stories. Plain text, no markdown.
 $constraints

@@ -22,8 +22,9 @@ Every day at 03:30 UTC (9:00 AM IST) a GitHub Actions run:
    search): 1-2 recent developments for a skill topic, or one news story from the last 7 days.
    It fetches the articles and the model works only from their text, citing them by id. News
    needs 2 independent sources or 1 official one, and every key fact is checked.
-4. Writes the post, has a separate "blunt editor" pass score and rewrite it, and runs
-   deterministic lint checks. Up to 3 attempts, each one fed the previous failures.
+4. Writes the post, has a separate "blunt editor" pass score it and flag every weak or
+   unsupported sentence, and runs deterministic lint checks. The writer fixes what was flagged,
+   up to 3 attempts. Only text the editor scored and lint passed can be posted.
 5. Publishes through the LinkedIn Posts API, commits the updated history back to the repo, and
    opens a GitHub issue with the post, link, scores and sources.
 
@@ -44,7 +45,7 @@ flowchart TD
     mix -- "skill" --> topic["Next topic from content/topics.yaml"]
     topic --> research["Research: search feeds and Hacker News, read the articles"]
     research --> write["Writer pass"]
-    write --> edit["Editor pass: scores and rewrite"]
+    write --> edit["Editor pass: scores and flags problems"]
     edit --> lint{"Lint clean and scores high enough?"}
     lint -- "no, up to 3 attempts" --> write
     lint -- "still no" --> fail["Issue: needs-attention"]
@@ -81,7 +82,8 @@ the research sources live in `content/feeds.yaml`.
   "part N of M" posts, or an opening line shaped like one of the last 5 posts.
 - **A second model as editor.** It scores "sounds like a real person" (needs 8/10), and for
   humorous posts "actually funny and still professional" (needs 7/10). It quotes every line that
-  sounds generic and rewrites the post.
+  sounds generic or isn't backed by the research or author facts, and the writer fixes those
+  lines. The post that goes out is always the exact text the editor scored.
 - **Facts only from this run's articles.** The model sees only articles fetched in this run and
   cites them by id; the agent maps ids back to real URLs and feed dates, so a post can't cite a
   made-up source. Personal details come only from `content/author.md`.
@@ -314,6 +316,11 @@ brief in `CLAUDE.md` where noted.
   server-side web search. Web search isn't free on current Gemini or Groq models, so research now
   comes from RSS feeds and Hacker News search, and the agent fetches the articles itself. This
   also makes sourcing stricter: the model can only cite articles the agent actually fetched.
+- **Editor rewrites are never posted (change from the brief, agreed October 2026).** The brief
+  has the editor return a rewritten version. In practice nothing checked that rewrite after it
+  was written, and editors slipped invented stories and wrong facts into it. The editor still
+  returns a rewrite (kept for reference), but the writer fixes the flagged sentences, and only a
+  version the editor scored and lint passed can be posted.
 - **JSON replies.** OpenAI-compatible providers get the JSON schema as an instruction and the
   reply is parsed forgivingly (with one retry on bad JSON); Claude uses native structured
   outputs.

@@ -2,7 +2,8 @@
 
 It scores the draft on "sounds like a real person" (and, for humorous posts, on "actually funny
 and still professional"), lists every sentence that sounds like AI, corporate or generic, flags
-unsupported facts, and returns a rewritten version.
+unsupported facts, and returns a rewritten version. The rewrite is kept for reference only; the
+writer fixes the listed problems (see `generate.py`).
 """
 
 from __future__ import annotations
@@ -65,9 +66,9 @@ class EditorReview:
     verdict: str = ""
 
     def is_complete(self, humorous: bool) -> bool:
-        """A real review: scores in 1-10 and a rewrite (not an empty template)."""
+        """A real review: scores in 1-10, not an empty template."""
         humour_ok = not humorous or 1 <= (self.humour_score or 0) <= 10
-        return 1 <= self.human_score <= 10 and bool(self.rewrite) and humour_ok
+        return 1 <= self.human_score <= 10 and humour_ok
 
     def feedback(self) -> list[str]:
         """Editor findings phrased as items the writer must fix."""

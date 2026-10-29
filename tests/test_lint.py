@@ -242,6 +242,11 @@ def test_one_triad_passes(clean_post: str) -> None:
     assert "triad" not in rules(with_line(clean_post, line))
 
 
+def test_one_oxford_comma_triad_counts_once(clean_post: str) -> None:
+    line = "You can handle permissions, VPCs, and observability."
+    assert "triad" not in rules(with_line(clean_post, line))
+
+
 def test_two_triads_fail(clean_post: str) -> None:
     line = "It was faster, cheaper and simpler. Teams wanted retries, timeouts, and alerts."
     assert "triad" in rules(with_line(clean_post, line))
