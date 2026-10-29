@@ -40,6 +40,7 @@ class NewsStory:
     date: str
     sources: list[Source] = field(default_factory=list)
     angle: str = ""
+    details: list[str] = field(default_factory=list)  # specifics the articles state
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> NewsStory:
@@ -50,6 +51,7 @@ class NewsStory:
             date=data.get("date", ""),
             sources=[Source.from_dict(s) for s in data.get("sources", [])],
             angle=data.get("angle", ""),
+            details=[str(d) for d in data.get("details", [])],
         )
 
 

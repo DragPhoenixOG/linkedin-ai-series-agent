@@ -22,7 +22,14 @@ from agent.config import Config
 from agent.llm import LLM, LLMAuthError, LLMError
 from agent.logs import log_event
 from agent.research import to_source
-from agent.sources import Article, SourceClient, by_ids, dedupe, format_articles
+from agent.sources import (
+    Article,
+    SourceClient,
+    by_ids,
+    clean_details,
+    dedupe,
+    format_articles,
+)
 from agent.state import History, NewsStory, Source
 from agent.templates import render
 from agent.textutil import domain_of, jaccard, slugify
@@ -237,6 +244,7 @@ def verify_candidate(
         date=candidate.date,
         sources=[to_source(a) for a in official_first],
         angle=candidate.angle,
+        details=clean_details(data.get("details")),
     )
 
 
@@ -275,4 +283,9 @@ def story_notes(story: NewsStory) -> str:
         f"   - {s.publisher or s.title or 'source'}{' (official)' if s.official else ''} <{s.url}>"
         for s in story.sources
     )
-    return f"Verified story ({story.date}): {story.title}\n{story.summary}\n   Sources:\n{refs}"
+    details = "".join(f"\n   - {d}" for d in story.details)
+    details = f"\n   Details stated in the articles:{details}" if details else ""
+    return (
+        f"Verified story ({story.date}): {story.title}\n{story.summary}{details}\n"
+        f"   Sources:\n{refs}"
+    )

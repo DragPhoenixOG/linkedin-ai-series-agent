@@ -63,6 +63,7 @@ def test_writer_prompt_carries_everything() -> None:
     assert "No bullet or numbered lists" in prompt
     assert "Do not end with a question" in prompt
     assert '"Older opener here."' in prompt
+    assert "must be in the summary or the details above" in prompt
     assert "Revision" not in prompt
 
 
@@ -159,6 +160,7 @@ def test_prompts_spell_out_personal_claims_and_humour_limits() -> None:
     assert "make them complete" in editor_prompt
     assert "never posted" in editor_prompt
     assert "Don't count or report those" in editor_prompt
+    assert "that aren't in the summary or the listed details" in editor_prompt
     assert "Not run yet." in editor_prompt  # no lint result passed in this call
 
 

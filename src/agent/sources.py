@@ -344,6 +344,13 @@ def format_articles(articles: list[Article], with_text: bool = True) -> str:
     return "\n\n".join(blocks)
 
 
+def clean_details(items: object, limit: int = 4) -> list[str]:
+    """The specific facts a model pulled from articles: non-empty strings, at most `limit`."""
+    if not isinstance(items, list):
+        return []
+    return [str(d).strip() for d in items if str(d).strip()][:limit]
+
+
 def by_ids(articles: list[Article], ids: object) -> list[Article]:
     """Map ids like "A2" (or 2) from a model reply back to articles, ignoring unknown ids."""
     picked = []

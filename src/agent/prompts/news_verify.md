@@ -21,6 +21,9 @@ Then:
 - verified: true only if status is "confirmed" and every key fact is supported.
 - summary: one or two plain sentences of what verifiably happened, corrected if needed, in your
   own words.
+- details: up to 4 specific facts the article text states, such as what exactly was built or
+  released, how it works, who uses it, names and numbers. The post may use only these
+  specifics, so pick the ones a writer would want, and copy nothing the text doesn't say.
 
 Reply with only this JSON inside <result></result> tags:
 
@@ -28,5 +31,6 @@ Reply with only this JSON inside <result></result> tags:
 {"verified": true,
  "status": "confirmed",
  "facts": [{"fact": "...", "supported": true, "article_ids": ["A1"]}],
- "summary": "..."}
+ "summary": "...",
+ "details": ["...", "..."]}
 </result>

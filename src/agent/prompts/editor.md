@@ -7,7 +7,9 @@ Subject: $subject_line
 
 ## Research the post may rely on
 
-Claims about recent events must match this. Anything else about recent events must go.
+Claims about recent events must match this. Anything else about recent events must go,
+including specifics about these companies or products (what they built, how it works, who uses
+it, examples, numbers) that aren't in the summary or the listed details.
 
 $research
 

@@ -20,6 +20,7 @@ from agent.sources import (
     Article,
     SourceClient,
     by_ids,
+    clean_details,
     dedupe,
     format_articles,
     is_relevant,
@@ -42,6 +43,7 @@ class Development:
     date: str
     why_it_matters: str
     sources: list[Source] = field(default_factory=list)
+    details: list[str] = field(default_factory=list)  # specifics the articles state
 
 
 @dataclass
@@ -68,9 +70,11 @@ class Research:
         lines = []
         for i, dev in enumerate(self.developments, 1):
             refs = "; ".join(f"{s.publisher or s.title or 'source'} <{s.url}>" for s in dev.sources)
+            details = "".join(f"\n   - {d}" for d in dev.details)
+            details = f"\n   Details stated in the articles:{details}" if details else ""
             lines.append(
-                f"{i}. ({dev.date}) {dev.summary}\n   Why it matters: {dev.why_it_matters}\n"
-                f"   Sources: {refs}"
+                f"{i}. ({dev.date}) {dev.summary}\n   Why it matters: {dev.why_it_matters}"
+                f"{details}\n   Sources: {refs}"
             )
         return "\n".join(lines)
 
@@ -143,6 +147,7 @@ def parse_developments(
                 date=max(a.published for a in cited).isoformat(),
                 why_it_matters=str(item.get("why_it_matters", "")).strip(),
                 sources=[to_source(a) for a in cited],
+                details=clean_details(item.get("details")),
             )
         )
     return kept[:MAX_DEVELOPMENTS]

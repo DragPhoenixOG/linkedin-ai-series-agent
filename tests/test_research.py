@@ -69,6 +69,25 @@ def test_parse_developments_maps_ids_to_real_sources() -> None:
     assert dev.sources[0].official is True
 
 
+def test_details_from_the_articles_reach_the_notes() -> None:
+    item = {
+        "summary": "MCP added auth.",
+        "why_it_matters": "Permissions.",
+        "details": ["Covers remote servers.", " ", "OAuth based.", "a", "b", "c"],
+        "article_ids": ["A1"],
+    }
+    [dev] = parse_developments({"developments": [item]}, [MCP_BLOG], TODAY, 45)
+    assert dev.details == ["Covers remote servers.", "OAuth based.", "a", "b"]  # blanks out, max 4
+    notes = Research([dev]).notes()
+    assert (
+        "Details stated in the articles:\n   - Covers remote servers.\n   - OAuth based." in notes
+    )
+
+    bare = parse_developments({"developments": [item | {"details": "x"}]}, [MCP_BLOG], TODAY, 45)
+    assert bare[0].details == []
+    assert "Details stated" not in Research(bare).notes()
+
+
 def test_parse_developments_caps_at_two() -> None:
     articles = [MCP_BLOG, MCP_HN]
     item = {"summary": "s", "why_it_matters": "w", "article_ids": ["A1"]}
