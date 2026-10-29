@@ -24,6 +24,7 @@ class Config:
     llm_api_key_env: str = ""
     max_output_tokens: int = 8192
     fallback_model: str = "gemini-3.5-flash-lite"
+    aws_region: str = "us-east-1"
     llm_timeout_seconds: int = 90
     writer_effort: str = "high"
     editor_effort: str = "high"

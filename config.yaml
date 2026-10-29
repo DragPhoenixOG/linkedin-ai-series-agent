@@ -6,16 +6,19 @@ post_interval_days: 3
 post_time_utc: "03:30"            # the workflow cron runs daily at this time (9:00 AM IST)
 
 # --- Language model ---------------------------------------------------------
-# Which provider writes and edits the posts. gemini and groq have free tiers; anthropic is paid.
+# Which provider writes and edits the posts. gemini and groq have free tiers; the others are paid.
 #   gemini:    key in GEMINI_API_KEY (free at aistudio.google.com)
 #   groq:      key in GROQ_API_KEY (free at console.groq.com)
 #   anthropic: key in ANTHROPIC_API_KEY (prepaid credit at platform.claude.com)
+#   bedrock:   Claude on Amazon Bedrock, key in AWS_BEARER_TOKEN_BEDROCK (a Bedrock API key;
+#              new AWS accounts get free credits that cover it)
 # Switching provider means changing llm_provider and the three model names below.
 # Run `python -m agent.main --check` to confirm the models exist for your key.
 # The newest Gemini Flash is often "overloaded" on the free tier, so the default is the one
 # before it. A model that is missing or keeps failing switches to fallback_model.
 llm_provider: gemini
 writer_model: gemini-3.6-flash      # groq: openai/gpt-oss-120b   anthropic: claude-sonnet-5-5
+                                    # bedrock: anthropic.claude-sonnet-5-5 (same for the next two)
 editor_model: gemini-3.6-flash      # groq: openai/gpt-oss-120b   anthropic: claude-sonnet-5-5
 research_model: gemini-3.5-flash-lite  # groq: openai/gpt-oss-120b   anthropic: claude-sonnet-5-5
 llm_base_url: ""                    # optional override for any OpenAI-compatible endpoint
@@ -23,15 +26,19 @@ llm_api_key_env: ""                 # optional override for the env var holding 
 max_output_tokens: 8192             # cap per call; on the Groq free tier use ~2000
 fallback_model: gemini-3.5-flash-lite  # used for the rest of a run if a model keeps saying "overloaded"
                                     # ("" to turn off)   groq: openai/gpt-oss-20b
+                                    # bedrock: anthropic.claude-sonnet-5, tried once if Claude
+                                    # declines a request (anthropic does this server-side)
+aws_region: us-east-1               # bedrock only: the AWS region your Bedrock API key belongs to
 llm_timeout_seconds: 90             # give up on a single request after this long, then retry
 writer_effort: high                 # anthropic only: output_config.effort
 editor_effort: high                 # anthropic only
 research_effort: medium             # anthropic only
-refusal_fallback: true              # anthropic only: server-side fallbacks on a safety decline
+refusal_fallback: true              # anthropic and bedrock: retry a safety decline on another model
 
 # Prices in USD per 1M tokens, only for the cost estimate in the run summary. Free tiers: none.
 pricing:
   claude-sonnet-5-5: {input: 2.00, output: 10.00, cache_write: 2.50, cache_read: 0.20}
+  anthropic.claude-sonnet-5-5: {input: 2.20, output: 11.00, cache_write: 2.75, cache_read: 0.22}
 
 # --- Research sources (free, no keys) ---------------------------------------
 # RSS feeds and Hacker News search, listed in content/feeds.yaml.

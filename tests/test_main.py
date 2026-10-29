@@ -7,15 +7,18 @@ import io
 import json
 import shutil
 from pathlib import Path
+from types import SimpleNamespace
 
+import anthropic
 import httpx
+import httpx2
 import pytest
 
 from agent.config import Config
-from agent.llm import LLMError, OpenAICompatLLM
+from agent.llm import AnthropicLLM, LLMError, OpenAICompatLLM
 from agent.main import EXIT_FAILED, EXIT_OK, EXIT_USAGE, Services, parse_args, run
 from conftest import CLEAN_POST
-from fakes import FakeLLM, FakeSources, article
+from fakes import FakeClient, FakeLLM, FakeSources, article
 from test_news import HEADLINES, RULES_OFFICIAL, cand, verified
 
 REPO = Path(__file__).resolve().parents[1]
@@ -298,6 +301,22 @@ def test_check_reports_models_and_feeds(root: Path) -> None:
     assert "Dead Feed: unreachable" in output
     assert "Hacker News search: 1 results" in output
     assert output.strip().endswith("All good.")
+
+
+def test_check_counts_tokens_for_claude_models(root: Path) -> None:
+    def handler(req):
+        if req["model"] == "gemini-3.5-flash-lite":
+            response = httpx2.Response(404, request=httpx2.Request("POST", "https://x.example"))
+            raise anthropic.NotFoundError("model not found", response=response, body=None)
+        return SimpleNamespace(input_tokens=3)
+
+    def factory(config: Config) -> AnthropicLLM:
+        return AnthropicLLM(FakeClient(handler), config, server_fallbacks=False)
+
+    code, output = run_check(root, factory, fake_sources())
+    assert code == EXIT_USAGE
+    assert "model gemini-3.6-flash: available" in output
+    assert "model gemini-3.5-flash-lite: PROBLEM: model not found" in output
 
 
 def test_check_flags_missing_model_and_key(root: Path) -> None:

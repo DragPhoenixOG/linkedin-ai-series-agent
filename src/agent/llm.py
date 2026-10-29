@@ -2,7 +2,8 @@
 
 - `OpenAICompatLLM` talks to any OpenAI-compatible chat endpoint. Gemini and Groq both offer one
   (with free tiers), so switching between them is a config change.
-- `AnthropicLLM` uses the official Anthropic SDK for Claude (paid).
+- `AnthropicLLM` uses the official Anthropic SDK for Claude (paid), either directly from Anthropic
+  or through Amazon Bedrock (the SDK's Bedrock Mantle client, same Messages API).
 
 Both return plain text, track token usage, and share forgiving JSON parsing.
 """
@@ -35,6 +36,7 @@ PROVIDERS: dict[str, tuple[str, str]] = {
     "gemini": ("https://generativelanguage.googleapis.com/v1beta/openai", "GEMINI_API_KEY"),
     "groq": ("https://api.groq.com/openai/v1", "GROQ_API_KEY"),
     "anthropic": ("", "ANTHROPIC_API_KEY"),
+    "bedrock": ("", "AWS_BEARER_TOKEN_BEDROCK"),  # Claude on Amazon Bedrock, Bedrock API key
 }
 
 
@@ -319,12 +321,19 @@ class OpenAICompatLLM(LLM):
 
 
 class AnthropicLLM(LLM):
-    """Claude through the official Anthropic SDK."""
+    """Claude through the official Anthropic SDK.
 
-    def __init__(self, client: Any, config: Config) -> None:
+    On the Claude API a refused request is retried server-side (`fallbacks: "default"`). Bedrock
+    doesn't offer that, so there (`server_fallbacks=False`) a refusal is retried once on
+    `config.fallback_model` instead.
+    """
+
+    def __init__(self, client: Any, config: Config, *, server_fallbacks: bool = True) -> None:
         super().__init__(config)
         self.client = client
-        self._fallback_enabled = config.refusal_fallback
+        self._fallback_enabled = config.refusal_fallback and server_fallbacks
+        use_own_retry = config.refusal_fallback and not server_fallbacks
+        self._refusal_model = config.fallback_model if use_own_retry else ""
 
     def _create(self, **kwargs: Any) -> Any:
         if self._fallback_enabled:
@@ -364,6 +373,8 @@ class AnthropicLLM(LLM):
                 output_config=output_config,
                 messages=[{"role": "user", "content": prompt}],
             )
+        except (anthropic.AuthenticationError, anthropic.PermissionDeniedError) as exc:
+            raise LLMAuthError(f"{label}: the API key was rejected: {exc}") from exc
         except anthropic.APIError as exc:
             raise LLMError(f"{label}: API call failed: {exc}") from exc
         usage = response.usage
@@ -379,6 +390,25 @@ class AnthropicLLM(LLM):
         if response.stop_reason == "refusal":
             details = getattr(response, "stop_details", None)
             category = getattr(details, "category", None) if details else None
+            if self._refusal_model and model != self._refusal_model:
+                log_event(
+                    logger,
+                    "llm.refusal_fallback",
+                    logging.WARNING,
+                    label=label,
+                    category=category,
+                    declined=model,
+                    now_using=self._refusal_model,
+                )
+                return self.complete(
+                    label=f"{label}.fallback",
+                    model=self._refusal_model,
+                    system=system,
+                    prompt=prompt,
+                    effort=effort,
+                    max_tokens=max_tokens,
+                    json_schema=json_schema,
+                )
             raise LLMRefusal(f"{label}: model declined the request (category={category})")
         if response.stop_reason == "max_tokens":
             log_event(logger, "llm.truncated", logging.WARNING, label=label, max_tokens=max_tokens)
@@ -388,6 +418,16 @@ class AnthropicLLM(LLM):
         if not text:
             raise LLMError(f"{label}: empty response")
         return LLMResponse(text=text, stop_reason=response.stop_reason)
+
+    def check_model(self, model: str) -> str | None:
+        """None if `model` answers a token count (free), else the reason it doesn't (`--check`)."""
+        try:
+            self.client.messages.count_tokens(
+                model=model, messages=[{"role": "user", "content": "hi"}]
+            )
+        except anthropic.APIError as exc:
+            return str(exc)[:300]
+        return None
 
 
 def _error_message(response: httpx.Response) -> str:
@@ -424,6 +464,17 @@ def provider_settings(config: Config) -> tuple[str, str]:
 def create_llm(config: Config) -> LLM:
     """Build the client for `config.llm_provider`, reading the API key from the environment."""
     base_url, key_env = provider_settings(config)
+    if config.llm_provider == "bedrock":
+        api_key = os.environ.get(key_env, "")
+        if not api_key:
+            raise LLMError(
+                f"{key_env} is not set. Create an Amazon Bedrock API key and add it to .env "
+                "locally, or as a GitHub Actions secret."
+            )
+        client = anthropic.AnthropicBedrockMantle(
+            aws_region=config.aws_region, api_key=api_key, max_retries=4
+        )
+        return AnthropicLLM(client, config, server_fallbacks=False)
     if config.llm_provider == "anthropic":
         hint = f"Set {key_env} (in .env locally, or as a GitHub Actions secret)."
         try:

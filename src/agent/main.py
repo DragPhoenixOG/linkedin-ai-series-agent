@@ -34,7 +34,14 @@ from agent.linkedin import (
     PostContent,
     token_status,
 )
-from agent.llm import LLM, LLMError, OpenAICompatLLM, create_llm, provider_settings
+from agent.llm import (
+    LLM,
+    AnthropicLLM,
+    LLMError,
+    OpenAICompatLLM,
+    create_llm,
+    provider_settings,
+)
 from agent.logs import log_event, setup_logging
 from agent.notify import Notifier, NotifyError
 from agent.sources import SourceClient, load_source_settings
@@ -399,7 +406,7 @@ def top_up_backlog(ctx: Context, notifier: Notifier, research_notes: str) -> Non
             notify.notify_failure,
             notifier,
             f"Topic backlog needs attention ({ctx.today.isoformat()})",
-            [str(exc), "Add topics to content/topics.yaml or check the Anthropic API key."],
+            [str(exc), "Add topics to content/topics.yaml or check the model API key."],
         )
 
 
@@ -686,7 +693,12 @@ def check(ctx: Context, out: TextIO) -> int:
     models = {config.writer_model, config.editor_model, config.research_model}
     if config.fallback_model and config.llm_provider != "anthropic":
         models.add(config.fallback_model)
-    if isinstance(llm, OpenAICompatLLM):
+    if isinstance(llm, AnthropicLLM):
+        for model in sorted(models):
+            error = llm.check_model(model)
+            problems += 1 if error else 0
+            lines.append(f"  model {model}: {'available' if not error else f'PROBLEM: {error}'}")
+    elif isinstance(llm, OpenAICompatLLM):
         try:
             available = set(llm.list_models())
             for model in sorted(models):

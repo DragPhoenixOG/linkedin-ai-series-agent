@@ -92,9 +92,13 @@ class FakeMessages:
         self.requests.append(kwargs)
         return self.handler(kwargs)
 
+    def count_tokens(self, **kwargs: Any) -> Any:
+        self.requests.append({"count_tokens": True, **kwargs})
+        return self.handler(kwargs)
+
 
 class FakeClient:
-    """Shaped like `anthropic.Anthropic` for the two endpoints `LLM` uses."""
+    """Shaped like `anthropic.Anthropic` for the endpoints `AnthropicLLM` uses."""
 
     def __init__(self, handler: Callable[[dict[str, Any]], Any]) -> None:
         self.messages = FakeMessages(handler)
