@@ -17,14 +17,14 @@ post_time_utc: "03:30"            # the workflow cron runs daily at this time (9
 # The newest Gemini Flash is often "overloaded" on the free tier, so the default is the one
 # before it. A model that is missing or keeps failing switches to fallback_model.
 llm_provider: bedrock-openai
-writer_model: gemini-3.6-flash      # groq: openai/gpt-oss-120b   anthropic: claude-sonnet-5-5
+writer_model: moonshotai.kimi-k2.5      # groq: openai/gpt-oss-120b   anthropic: claude-sonnet-5-5
                                     # bedrock: anthropic.claude-sonnet-5-5 (same for the next two)
-editor_model: gemini-3.6-flash      # groq: openai/gpt-oss-120b   anthropic: claude-sonnet-5-5
-research_model: gemini-3.5-flash-lite  # groq: openai/gpt-oss-120b   anthropic: claude-sonnet-5-5
+editor_model: deepseek.v3.2      # groq: openai/gpt-oss-120b   anthropic: claude-sonnet-5-5
+research_model: deepseek.v3.2  # groq: openai/gpt-oss-120b   anthropic: claude-sonnet-5-5
 llm_base_url: https://bedrock-mantle.us-east-1.api.aws/v1                   # optional override for any OpenAI-compatible endpoint
 llm_api_key_env: AWS_BEARER_TOKEN_BEDROCK                # optional override for the env var holding the key
 max_output_tokens: 8192             # cap per call; on the Groq free tier use ~2000
-fallback_model: gemini-3.5-flash-lite  # used for the rest of a run if a model keeps saying "overloaded"
+fallback_model: mistral.mistral-large-3-675b-instruct  # used for the rest of a run if a model keeps saying "overloaded"
                                     # ("" to turn off)   groq: openai/gpt-oss-20b
                                     # bedrock: anthropic.claude-sonnet-5, tried once if Claude
                                     # declines a request (anthropic does this server-side)
