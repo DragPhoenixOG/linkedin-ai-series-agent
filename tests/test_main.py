@@ -13,6 +13,7 @@ import anthropic
 import httpx
 import httpx2
 import pytest
+import yaml
 
 from agent.config import Config
 from agent.llm import AnthropicLLM, LLMError, OpenAICompatLLM
@@ -22,6 +23,15 @@ from fakes import FakeClient, FakeLLM, FakeSources, article
 from test_news import HEADLINES, RULES_OFFICIAL, cand, verified
 
 REPO = Path(__file__).resolve().parents[1]
+TEST_LLM = {
+    "llm_provider": "gemini",
+    "writer_model": "gemini-3.6-flash",
+    "editor_model": "gemini-3.6-flash",
+    "research_model": "gemini-3.5-flash-lite",
+    "fallback_model": "gemini-3.5-flash-lite",
+    "llm_base_url": "",
+    "llm_api_key_env": "",
+}
 
 AGENT_RUNTIME = article(
     "Agentic AI moves from chat to actions with a new agent runtime",
@@ -35,8 +45,10 @@ AGENT_RUNTIME = article(
 
 @pytest.fixture
 def root(tmp_path: Path) -> Path:
-    for name in ("config.yaml",):
-        shutil.copy(REPO / name, tmp_path / name)
+    # The repo's own provider and model choice can change at any time; tests pin their own.
+    config = yaml.safe_load((REPO / "config.yaml").read_text(encoding="utf-8"))
+    config.update(TEST_LLM)
+    (tmp_path / "config.yaml").write_text(yaml.safe_dump(config, sort_keys=False), "utf-8")
     for folder in ("content", "state", "posts"):
         shutil.copytree(REPO / folder, tmp_path / folder)
     return tmp_path
