@@ -14,6 +14,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from agent.config import Config
+from agent.lint import LintResult
 from agent.llm import LLM
 from agent.logs import log_event
 from agent.templates import fragment, render
@@ -152,8 +153,18 @@ def parse_review(data: Any, humorous: bool) -> EditorReview:
     )
 
 
-def edit_draft(llm: LLM, config: Config, brief: PostBrief, draft: str) -> EditorReview:
-    """Score and rewrite a draft."""
+def describe_checks(checks: LintResult | None) -> str:
+    """What the deterministic lint found, so the editor doesn't count words or dashes itself."""
+    if checks is None:
+        return "Not run yet."
+    found = "\n".join(f"- {i.detail}" for i in checks.issues) or "- Nothing: all checks passed."
+    return f"The draft has {checks.word_count} words. Problems the code found:\n{found}"
+
+
+def edit_draft(
+    llm: LLM, config: Config, brief: PostBrief, draft: str, checks: LintResult | None = None
+) -> EditorReview:
+    """Score a draft and list its problems (plus a reference rewrite)."""
     humorous = brief.tone == "humorous"
     prompt = render(
         "editor",
@@ -165,6 +176,7 @@ def edit_draft(llm: LLM, config: Config, brief: PostBrief, draft: str) -> Editor
         research=brief.research_notes,
         recent_posts=format_recent_posts(brief.recent_posts),
         draft=draft,
+        checks=describe_checks(checks),
         humour_instruction=fragment("editor_humour" if humorous else "editor_straight"),
         min_words=config.min_words,
         max_words=config.max_words,

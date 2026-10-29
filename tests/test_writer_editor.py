@@ -152,10 +152,14 @@ def test_prompts_spell_out_personal_claims_and_humour_limits() -> None:
     assert "personal claims" in writer_system and "interns" in writer_system
     assert "I've watched teams" in writer_system and "em dashes" in writer_system
     assert "a $10,000 refund" in writer_system
+    assert "Concrete without inventing" in writer_system
+    assert "The future isn't A. It's B" in writer_system
     editor_prompt = llm.calls[1]["prompt"]
     assert "made-up personal story" in editor_prompt
     assert "make them complete" in editor_prompt
     assert "never posted" in editor_prompt
+    assert "Don't count or report those" in editor_prompt
+    assert "Not run yet." in editor_prompt  # no lint result passed in this call
 
 
 EMPTY_TEMPLATE = {
