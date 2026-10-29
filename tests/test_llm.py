@@ -72,7 +72,7 @@ def compat(handler, sleeps: list[float] | None = None, **config) -> OpenAICompat
 def ask(llm, **overrides):
     kwargs = {
         "label": "test",
-        "model": "gemini-3.8-flash",
+        "model": "gemini-3.6-flash",
         "system": ["shared", "role"],
         "prompt": "hi",
     }
@@ -97,7 +97,7 @@ def test_compat_request_shape() -> None:
     assert request.headers["Authorization"] == "Bearer key-123"
     body = json.loads(request.content)
     assert body == {
-        "model": "gemini-3.8-flash",
+        "model": "gemini-3.6-flash",
         "messages": [
             {"role": "system", "content": "shared\n\nrole"},
             {"role": "user", "content": "hi"},
@@ -230,9 +230,9 @@ def test_complete_json_asks_again_after_bad_json() -> None:
 def test_list_models_strips_prefix() -> None:
     def handler(request: httpx.Request) -> httpx.Response:
         assert request.url.path.endswith("/models")
-        return httpx.Response(200, json={"data": [{"id": "models/gemini-3.8-flash"}, {"id": "b"}]})
+        return httpx.Response(200, json={"data": [{"id": "models/gemini-3.6-flash"}, {"id": "b"}]})
 
-    assert compat(handler).list_models() == ["b", "gemini-3.8-flash"]
+    assert compat(handler).list_models() == ["b", "gemini-3.6-flash"]
 
 
 # --- Provider selection -------------------------------------------------------------------------
@@ -352,6 +352,122 @@ def test_anthropic_usage_and_cost() -> None:
     assert llm.usage.cost_usd == pytest.approx(3.0)  # $2 input + $1 output
 
 
+# --- Claude on Amazon Bedrock ----------------------------------------------------------------------
+
+
+def bedrock(handler, **config) -> tuple[AnthropicLLM, FakeClient]:
+    client = FakeClient(handler)
+    settings = {"llm_provider": "bedrock", "fallback_model": "anthropic.claude-sonnet-5"} | config
+    return AnthropicLLM(client, Config(**settings), server_fallbacks=False), client
+
+
+def test_create_llm_bedrock_needs_key(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("AWS_BEARER_TOKEN_BEDROCK", raising=False)
+    with pytest.raises(LLMError, match="AWS_BEARER_TOKEN_BEDROCK"):
+        create_llm(Config(llm_provider="bedrock"))
+    monkeypatch.setenv("AWS_BEARER_TOKEN_BEDROCK", "k")
+    llm = create_llm(Config(llm_provider="bedrock", aws_region="eu-west-1"))
+    assert isinstance(llm, AnthropicLLM)
+    assert isinstance(llm.client, anthropic.AnthropicBedrockMantle)
+    assert str(llm.client.base_url).startswith("https://bedrock-mantle.eu-west-1.api.aws")
+
+
+def test_bedrock_wire_request() -> None:
+    """The real SDK client: Bedrock URL, bearer key, and the request body we rely on."""
+    seen: list[httpx2.Request] = []
+
+    def handler(request: httpx2.Request) -> httpx2.Response:
+        seen.append(request)
+        return httpx2.Response(
+            200,
+            json={
+                "id": "msg_1",
+                "type": "message",
+                "role": "assistant",
+                "model": "anthropic.claude-sonnet-5-5",
+                "content": [{"type": "text", "text": "ok"}],
+                "stop_reason": "end_turn",
+                "stop_sequence": None,
+                "usage": {"input_tokens": 10, "output_tokens": 2},
+            },
+        )
+
+    client = anthropic.AnthropicBedrockMantle(
+        aws_region="us-east-1",
+        api_key="test-key",
+        http_client=httpx2.Client(transport=httpx2.MockTransport(handler)),
+    )
+    llm = AnthropicLLM(client, Config(llm_provider="bedrock"), server_fallbacks=False)
+    assert ask(llm, model="anthropic.claude-sonnet-5-5", effort="high").text == "ok"
+    request = seen[0]
+    assert str(request.url) == "https://bedrock-mantle.us-east-1.api.aws/anthropic/v1/messages"
+    assert request.headers["authorization"] == "Bearer test-key"
+    body = json.loads(request.content)
+    assert body["model"] == "anthropic.claude-sonnet-5-5"
+    assert body["output_config"] == {"effort": "high"}
+    assert body["system"][0]["cache_control"] == {"type": "ephemeral"}
+    assert "fallbacks" not in body
+
+
+def test_bedrock_sends_no_server_fallbacks() -> None:
+    llm, client = bedrock(lambda req: fake_message([block("text", text="ok")]))
+    ask(llm, model="anthropic.claude-sonnet-5-5")
+    assert "fallbacks" not in client.messages.requests[0]
+    assert "betas" not in client.messages.requests[0]
+
+
+def test_bedrock_refusal_is_retried_once_on_the_fallback_model() -> None:
+    refused = fake_message([], stop_reason="refusal")
+
+    def handler(req):
+        if req["model"] == "anthropic.claude-sonnet-5-5":
+            return refused
+        return fake_message([block("text", text="from fallback")])
+
+    llm, client = bedrock(handler)
+    assert ask(llm, model="anthropic.claude-sonnet-5-5").text == "from fallback"
+    assert [r["model"] for r in client.messages.requests] == [
+        "anthropic.claude-sonnet-5-5",
+        "anthropic.claude-sonnet-5",
+    ]
+
+
+def test_bedrock_refusal_by_both_models_raises() -> None:
+    llm, client = bedrock(lambda req: fake_message([], stop_reason="refusal"))
+    with pytest.raises(LLMRefusal):
+        ask(llm, model="anthropic.claude-sonnet-5-5")
+    assert len(client.messages.requests) == 2
+    llm, client = bedrock(
+        lambda req: fake_message([], stop_reason="refusal"), refusal_fallback=False
+    )
+    with pytest.raises(LLMRefusal):
+        ask(llm, model="anthropic.claude-sonnet-5-5")
+    assert len(client.messages.requests) == 1
+
+
+def test_rejected_claude_key_stops_the_run() -> None:
+    def handler(req):
+        response = httpx2.Response(403, request=httpx2.Request("POST", "https://bedrock.example"))
+        raise anthropic.PermissionDeniedError("not authorized", response=response, body=None)
+
+    llm, _ = bedrock(handler)
+    with pytest.raises(LLMAuthError, match="not authorized"):
+        ask(llm, model="anthropic.claude-sonnet-5-5")
+
+
+def test_check_model_uses_token_counting() -> None:
+    def handler(req):
+        if req["model"] == "anthropic.claude-nope":
+            response = httpx2.Response(404, request=httpx2.Request("POST", "https://x.example"))
+            raise anthropic.NotFoundError("model not found", response=response, body=None)
+        return SimpleNamespace(input_tokens=3)
+
+    llm, client = bedrock(handler)
+    assert llm.check_model("anthropic.claude-sonnet-5-5") is None
+    assert "model not found" in (llm.check_model("anthropic.claude-nope") or "")
+    assert all(r.get("count_tokens") for r in client.messages.requests)
+
+
 # --- Overload fallback ---------------------------------------------------------------------------
 
 
@@ -361,7 +477,7 @@ def overloaded_then_ok(seen: list[str], failures: int, error: str = "503"):
     def handler(request: httpx.Request) -> httpx.Response:
         model = json.loads(request.content)["model"]
         seen.append(model)
-        if model == "gemini-3.8-flash" and len([m for m in seen if m == model]) <= failures:
+        if model == "gemini-3.6-flash" and len([m for m in seen if m == model]) <= failures:
             if error == "timeout":
                 raise httpx.ReadTimeout("hung", request=request)
             return httpx.Response(503, json={"error": {"message": "high demand"}})
@@ -377,7 +493,7 @@ def test_overloaded_model_switches_to_fallback_and_stays_there() -> None:
         overloaded_then_ok(seen, failures=99), sleeps, fallback_model="gemini-3.5-flash-lite"
     )
     assert ask(llm).text == "from gemini-3.5-flash-lite"
-    assert seen == ["gemini-3.8-flash", "gemini-3.8-flash", "gemini-3.5-flash-lite"]
+    assert seen == ["gemini-3.6-flash", "gemini-3.6-flash", "gemini-3.5-flash-lite"]
     assert len(sleeps) == 1  # one backoff, then the switch
     seen.clear()
     assert ask(llm).text == "from gemini-3.5-flash-lite"
@@ -396,8 +512,8 @@ def test_timeouts_count_as_overload() -> None:
 def test_one_overload_is_just_retried() -> None:
     seen: list[str] = []
     llm = compat(overloaded_then_ok(seen, failures=1), fallback_model="gemini-3.5-flash-lite")
-    assert ask(llm).text == "from gemini-3.8-flash"
-    assert seen == ["gemini-3.8-flash", "gemini-3.8-flash"]
+    assert ask(llm).text == "from gemini-3.6-flash"
+    assert seen == ["gemini-3.6-flash", "gemini-3.6-flash"]
 
 
 def test_rate_limits_do_not_switch_models() -> None:
@@ -410,7 +526,7 @@ def test_rate_limits_do_not_switch_models() -> None:
         return httpx.Response(200, json=chat_reply("ok"))
 
     ask(compat(handler, fallback_model="gemini-3.5-flash-lite"))
-    assert set(seen) == {"gemini-3.8-flash"}
+    assert set(seen) == {"gemini-3.6-flash"}
 
 
 def test_fallback_can_be_turned_off() -> None:
@@ -418,7 +534,7 @@ def test_fallback_can_be_turned_off() -> None:
     llm = compat(overloaded_then_ok(seen, failures=99), fallback_model="")
     with pytest.raises(LLMError, match="still failing"):
         ask(llm)
-    assert set(seen) == {"gemini-3.8-flash"}
+    assert set(seen) == {"gemini-3.6-flash"}
 
 
 def test_unknown_model_falls_back_and_stays_there() -> None:
@@ -427,14 +543,14 @@ def test_unknown_model_falls_back_and_stays_there() -> None:
     def handler(request: httpx.Request) -> httpx.Response:
         model = json.loads(request.content)["model"]
         seen.append(model)
-        if model == "gemini-3.8-flash":
+        if model == "gemini-3.6-flash":
             return httpx.Response(404, json={"error": {"message": "model not found"}})
         return httpx.Response(200, json=chat_reply(f"from {model}"))
 
     llm = compat(handler, fallback_model="gemini-3.5-flash-lite")
     assert ask(llm).text == "from gemini-3.5-flash-lite"
     assert ask(llm).text == "from gemini-3.5-flash-lite"
-    assert seen == ["gemini-3.8-flash", "gemini-3.5-flash-lite", "gemini-3.5-flash-lite"]
+    assert seen == ["gemini-3.6-flash", "gemini-3.5-flash-lite", "gemini-3.5-flash-lite"]
 
 
 def test_unknown_fallback_model_still_fails_clearly() -> None:

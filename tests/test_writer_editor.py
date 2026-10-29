@@ -8,7 +8,7 @@ from pathlib import Path
 import pytest
 
 from agent.config import Config
-from agent.editor import edit_draft, parse_review
+from agent.editor import edit_draft, is_real_problem, parse_review
 from agent.llm import LLMError
 from agent.state import NewsStory, Source
 from agent.writer import PostBrief, Voice, extract_post, load_voice, tidy_post, write_draft
@@ -72,6 +72,7 @@ def test_writer_revision_includes_feedback_and_previous() -> None:
     prompt = llm.calls[0]["prompt"]
     assert "- too generic" in prompt
     assert "v1 text" in prompt
+    assert "Rewording it is not enough" in prompt
 
 
 def test_news_subject_includes_story_and_link() -> None:
@@ -177,3 +178,67 @@ def test_humorous_review_needs_a_humour_score() -> None:
     no_humour = EMPTY_TEMPLATE | {"human_score": 8, "rewrite": "x"}
     assert parse_review(no_humour, humorous=False).is_complete(humorous=False)
     assert not parse_review(no_humour, humorous=True).is_complete(humorous=True)
+
+
+@pytest.mark.parametrize(
+    "note",
+    [
+        "",
+        "None.",
+        "N/A",
+        "Nothing to flag",
+        "No factual problems found; the AWS Bedrock AgentCore reference is correctly cited from"
+        " the research.",
+        "No issues.",
+        "No unsupported claims.",
+        "One em dash, which is allowed (max 1).",
+        "The single emoji is acceptable here.",
+        "Hashtag count (3) is within the limit.",
+        "All claims are supported by the research.",
+    ],
+)
+def test_notes_that_nothing_is_wrong_are_not_problems(note: str) -> None:
+    assert not is_real_problem(note)
+
+
+@pytest.mark.parametrize(
+    "problem",
+    [
+        "Claims 40% uplift; not in research.",
+        "'We spent a few years...' implies his team built this, violating the author facts.",
+        "'We spent the last two years focusing on how well models can talk.'",
+        "No factual problems except 'we broke our test data', which is invented.",
+        "Two em dashes, but only 1 is allowed.",
+        "None of the research mentions AgentCore pricing.",
+        "'Agents are fine for low-risk work' overstates what the research says.",
+        "The closing line is a bit too punchy/slogan-like.",
+    ],
+)
+def test_real_problems_are_kept(problem: str) -> None:
+    assert is_real_problem(problem)
+
+
+def test_review_drops_notes_that_nothing_is_wrong() -> None:
+    review = parse_review(
+        {
+            "human_score": 8,
+            "rewrite": "x",
+            "fact_problems": ["No factual problems found; the reference is correctly cited."],
+            "rule_problems": ["Contains one em dash, which is allowed (max 1).", "Too long."],
+        },
+        humorous=False,
+    )
+    assert review.fact_problems == []
+    assert review.rule_problems == ["Too long."]
+    single = parse_review({"human_score": 8, "fact_problems": "Invented 40%."}, humorous=False)
+    assert single.fact_problems == ["Invented 40%."]
+
+
+def test_prompts_cover_the_industry_we_and_empty_lists() -> None:
+    llm = FakeLLM({"writer": "<post>x</post>", "editor": {"human_score": 9, "rewrite": "x"}})
+    write_draft(llm, Config(), brief())
+    edit_draft(llm, Config(), brief(), "x")
+    assert 'industry "we"' in llm.calls[0]["system"][1]
+    editor_prompt = llm.calls[1]["prompt"]
+    assert 'industry "we"' in editor_prompt
+    assert "return an empty list" in editor_prompt

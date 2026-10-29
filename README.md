@@ -60,7 +60,7 @@ flowchart TD
 | `topics.py` | Next topic; asks the model for 5 new ones when fewer than 3 are left, so the series never runs dry |
 | `sources.py` | Free research sources: RSS/Atom feeds, Hacker News search, article text extraction |
 | `research.py`, `news.py` | Pick developments and news from fetched articles; news is scored, de-duplicated and fact-checked |
-| `llm.py` | One interface over OpenAI-compatible providers (Gemini, Groq) and Claude |
+| `llm.py` | One interface over OpenAI-compatible providers (Gemini, Groq) and Claude (direct or on Amazon Bedrock) |
 | `writer.py`, `editor.py`, `generate.py` | Writer and editor passes and the retry loop |
 | `lint.py` | Deterministic anti-AI checks (banned phrases, em dashes, "it's not X, it's Y", repeated openings, emoji, hashtags, length) |
 | `linkedin.py` | LinkedIn Posts API client: escaping, retries, 401 handling |
@@ -109,6 +109,35 @@ the comments there):
 | `gemini` (default) | `GEMINI_API_KEY` | Free tier, rate-limited |
 | `groq` | `GROQ_API_KEY` | Free tier, rate-limited (tight tokens-per-minute; see comments in `config.yaml`) |
 | `anthropic` | `ANTHROPIC_API_KEY` | Paid, prepaid credit at platform.claude.com |
+| `bedrock` | `AWS_BEARER_TOKEN_BEDROCK` | Claude on Amazon Bedrock. Paid per token, but new AWS accounts get free credits |
+
+#### Claude on Amazon Bedrock
+
+Claude writes noticeably better posts than the free models, and AWS gives new accounts (opened
+on or after 15 July 2025) up to $200 in credits that Bedrock can use. At this agent's volume
+that covers months of posts. Bedrock has no free tier of its own, so once the credits run out it
+costs a few dollars a month (see [Costs](#costs)).
+
+1. Create an AWS account, ideally a personal one, since the bot posts to your own profile.
+2. In the Amazon Bedrock console, open the model catalog and submit Anthropic's one-time
+   **use case details** form. Claude requests fail until this is done.
+3. In the Bedrock console, create an **API key** (give it an expiry date) and save it as the
+   `AWS_BEARER_TOKEN_BEDROCK` secret.
+4. In **AWS Budgets**, add a small monthly budget alert (say $5), so a bug can never run up a
+   bill unnoticed.
+5. In `config.yaml`:
+
+   ```yaml
+   llm_provider: bedrock
+   writer_model: anthropic.claude-sonnet-5-5
+   editor_model: anthropic.claude-sonnet-5-5
+   research_model: anthropic.claude-sonnet-5-5
+   fallback_model: anthropic.claude-sonnet-5   # tried once if Claude declines a request
+   aws_region: us-east-1                       # the region your API key belongs to
+   ```
+
+6. Run the workflow with **check** ticked. Each model should show `available`; a `PROBLEM` line
+   carries Bedrock's own message (a wrong model ID, the wrong region, or the form not submitted).
 
 ### 3. LinkedIn developer app
 
@@ -139,7 +168,7 @@ In your repository: **Settings > Secrets and variables > Actions**.
 
 | Name | Kind | Value |
 |---|---|---|
-| `GEMINI_API_KEY` | Secret | Your Gemini key (or `GROQ_API_KEY` / `ANTHROPIC_API_KEY` for those providers) |
+| `GEMINI_API_KEY` | Secret | Your Gemini key (or `GROQ_API_KEY` / `ANTHROPIC_API_KEY` / `AWS_BEARER_TOKEN_BEDROCK` for those providers) |
 | `LINKEDIN_ACCESS_TOKEN` | Secret | From `linkedin_auth.py` |
 | `LINKEDIN_PERSON_URN` | Secret | From `linkedin_auth.py`, like `urn:li:person:AbC123` |
 | `LINKEDIN_TOKEN_EXPIRES_ON` | Variable | From `linkedin_auth.py`, like `2026-12-27` |
@@ -214,8 +243,9 @@ and variable.
 
 - **Model:** $0 on the Gemini or Groq free tier. A posting day makes roughly 5 to 10 model calls
   (research or news scan and check, then writer and editor, up to 3 rounds), well inside free
-  limits. Every run logs its token use in the final `run.summary` line. With Claude instead,
-  expect very roughly $1-3 a month at Sonnet prices.
+  limits. Every run logs its token use in the final `run.summary` line. With Claude instead
+  (directly or on Bedrock), expect very roughly $1-3 a month at Sonnet prices, about $0.15-0.35
+  per post. On a new AWS account the free credits cover that for months.
 - **Research sources:** free. RSS feeds and the Hacker News search API need no keys.
 - **LinkedIn API:** free.
 - **GitHub Actions:** free for public repositories. Non-posting days finish in well under a
@@ -274,6 +304,12 @@ brief in `CLAUDE.md` where noted.
   (`https://generativelanguage.googleapis.com/v1beta/openai/`), with Groq as a drop-in
   alternative. Claude is still supported (`llm_provider: anthropic`) through the official
   Anthropic SDK, with prompt caching and the server-side refusal fallback.
+- **Claude on Amazon Bedrock.** `llm_provider: bedrock` uses the Anthropic SDK's Bedrock Mantle
+  client (`AnthropicBedrockMantle`), which speaks the same Messages API, so effort, prompt
+  caching and structured outputs work unchanged. It authenticates with a Bedrock API key
+  (`AWS_BEARER_TOKEN_BEDROCK`), so no AWS SDK is needed. Bedrock doesn't offer the server-side
+  refusal fallback, so a declined request is retried once on `fallback_model` instead. The
+  **check** run tests each model with a token count, which is free.
 - **Research from free sources (change from the brief).** The brief specified Anthropic's
   server-side web search. Web search isn't free on current Gemini or Groq models, so research now
   comes from RSS feeds and Hacker News search, and the agent fetches the articles itself. This
@@ -291,7 +327,8 @@ brief in `CLAUDE.md` where noted.
 
 - [ ] Model API key created (Gemini by default) and saved as the `GEMINI_API_KEY` secret.
 - [ ] **Run workflow** with **check** ticked: the log ends with `All good.` If a model shows
-      `NOT FOUND`, use one from the listed available models in `config.yaml`.
+      `NOT FOUND`, use one from the listed available models in `config.yaml` (on Claude
+      providers a `PROBLEM` line carries the API's own reason).
 - [ ] Dry runs read well for all four kinds of post (pick them with **post_type** and **tone**):
       straight skill, humorous skill, straight news, sarcastic news. If the voice is off, edit
       `content/style.md`, not the code.
