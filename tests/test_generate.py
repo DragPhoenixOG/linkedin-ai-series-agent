@@ -52,11 +52,25 @@ def test_low_score_retries_with_feedback() -> None:
     assert CLEAN_POST.splitlines()[0] in second_prompt  # previous version is passed back
 
 
-def test_lint_failure_on_rewrite_falls_back_to_clean_draft() -> None:
-    llm = FakeLLM({"writer": f"<post>{CLEAN_POST}</post>", "editor": review(9, BAD_POST)})
+def test_the_editor_rewrite_is_never_posted() -> None:
+    invented = "I spent last month watching three teams ship agents. " + CLEAN_POST
+    llm = FakeLLM({"writer": f"<post>{CLEAN_POST}</post>", "editor": review(9, invented)})
     result = generate_post(llm, Config(), brief())
     assert result.success
     assert result.best.text == CLEAN_POST
+
+
+def test_a_failing_draft_is_not_rescued_by_a_clean_rewrite() -> None:
+    llm = FakeLLM(
+        {
+            "writer": seq(f"<post>{BAD_POST}</post>", f"<post>{CLEAN_POST}</post>"),
+            "editor": review(9, CLEAN_POST),
+        }
+    )
+    result = generate_post(llm, Config(), brief())
+    assert not result.attempts[0].passed
+    assert any("banned_phrase" in p for p in result.attempts[0].problems)
+    assert result.success and result.best.number == 2
 
 
 def test_lint_failure_feeds_back_rule() -> None:
@@ -125,9 +139,7 @@ def test_incomplete_review_is_reported_as_such() -> None:
     )
     result = generate_post(llm, Config(), brief())
     assert result.success
-    assert result.attempts[0].problems == [
-        "The editor returned an incomplete review (no scores or no rewrite)."
-    ]
+    assert result.attempts[0].problems == ["The editor returned an incomplete review (no scores)."]
 
 
 def test_a_note_that_nothing_is_wrong_does_not_block_a_good_post() -> None:

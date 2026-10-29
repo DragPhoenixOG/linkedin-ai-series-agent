@@ -409,8 +409,14 @@ def _check_hashtags(text: str, limits: LintLimits) -> list[LintIssue]:
 def _check_triads(text: str) -> list[LintIssue]:
     found: list[str] = []
     for sentence in sentences(text):
+        spans: list[tuple[int, int]] = []
         for pattern in _TRIAD_RE:
-            found.extend(m.group(0) for m in pattern.finditer(sentence))
+            for m in pattern.finditer(sentence):
+                # Both patterns can match one list ("faster, cheaper, and better"): count it once.
+                if any(m.start() < end and start < m.end() for start, end in spans):
+                    continue
+                spans.append(m.span())
+                found.append(m.group(0))
     if len(found) > 1:
         quoted = "; ".join(f'"{f}"' for f in found[:3])
         return [

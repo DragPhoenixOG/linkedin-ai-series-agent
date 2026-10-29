@@ -1,16 +1,19 @@
 """The write -> edit -> lint loop with retries (CLAUDE.md section 4, "Two-pass generation").
 
-Each attempt: the writer drafts (or revises the last version using the feedback), the editor
-scores the draft and rewrites it, and the deterministic lint checks the result. A post passes
-when the editor's scores clear the bar and lint is clean. Otherwise the failures are fed back and
-the loop tries again, up to `max_attempts`. If nothing passes, the caller gets the best attempt
-and the reasons, and must not publish.
+Each attempt: the writer drafts (or fixes the flagged sentences of the last version), the editor
+scores that exact text and lists its problems, and the deterministic lint checks it. A post
+passes when the editor's scores clear the bar and lint is clean. Otherwise the problems are fed
+back and the writer tries again, up to `max_attempts`. If nothing passes, the caller gets the best
+attempt and the reasons, and must not publish.
+
+Only text the editor has scored and lint has passed can be posted. The editor also returns a
+rewrite, but it is kept for reference only: nothing checks it after it's written, and editors
+have slipped invented stories and wrong facts into rewrites.
 """
 
 from __future__ import annotations
 
 import logging
-from collections.abc import Sequence
 from dataclasses import dataclass, field
 
 from agent.config import Config
@@ -28,9 +31,8 @@ class Attempt:
     """One write -> edit -> lint round."""
 
     number: int
-    draft: str
+    text: str  # the writer's version: the exact text the editor scored and lint checked
     review: EditorReview
-    text: str  # the candidate chosen from this round (editor rewrite, or the draft)
     lint: LintResult
     problems: list[str] = field(default_factory=list)
 
@@ -63,7 +65,7 @@ class GenerationResult:
 def score_problems(review: EditorReview, brief: PostBrief, config: Config) -> list[str]:
     """Editor-score gates as human-readable problems."""
     if not review.is_complete(brief.tone == "humorous"):
-        return ["The editor returned an incomplete review (no scores or no rewrite)."]
+        return ["The editor returned an incomplete review (no scores)."]
     problems = []
     if review.human_score < config.min_editor_score:
         problems.append(
@@ -85,18 +87,6 @@ def score_problems(review: EditorReview, brief: PostBrief, config: Config) -> li
     return problems
 
 
-def choose_candidate(
-    draft: str, review: EditorReview, limits: LintLimits, recent: Sequence[str]
-) -> tuple[str, LintResult]:
-    """Prefer the editor's rewrite; use the draft only if it lints clean and the rewrite doesn't."""
-    candidates = [t for t in (review.rewrite, draft) if t]
-    results = [(text, lint_post(text, limits, recent)) for text in candidates]
-    for text, result in results:
-        if result.passed:
-            return text, result
-    return results[0]
-
-
 def build_feedback(attempt: Attempt) -> str:
     """Everything the writer needs to fix (score gates, lint failures, editor notes)."""
     items = dict.fromkeys([*attempt.problems, *attempt.review.feedback()])
@@ -110,12 +100,12 @@ def generate_post(llm: LLM, config: Config, brief: PostBrief) -> GenerationResul
     feedback: str | None = None
     previous: str | None = None
     for number in range(1, config.max_attempts + 1):
-        draft = write_draft(llm, config, brief, feedback=feedback, previous=previous)
-        review = edit_draft(llm, config, brief, draft)
-        text, lint = choose_candidate(draft, review, limits, brief.recent_posts)
+        text = write_draft(llm, config, brief, feedback=feedback, previous=previous)
+        review = edit_draft(llm, config, brief, text)
+        lint = lint_post(text, limits, brief.recent_posts)
         problems = score_problems(review, brief, config)
         problems += [f"Lint [{i.rule}]: {i.detail}" for i in lint.issues]
-        attempt = Attempt(number, draft, review, text, lint, problems)
+        attempt = Attempt(number, text, review, lint, problems)
         result.attempts.append(attempt)
         log_event(
             logger,

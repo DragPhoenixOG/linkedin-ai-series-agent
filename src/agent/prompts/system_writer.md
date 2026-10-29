@@ -11,15 +11,23 @@ The style guide and author facts above are binding. The rules people most often 
   facts say so. The same goes for the industry "we" ("we spent two years making models
   talk"): readers take it as his story. Write about what teams commonly do ("a lot of
   teams...", "the industry spent..."), or frame a scenario as clearly hypothetical ("picture a
-  team that..."). Opinions in the first person are fine.
+  team that..."). Opinions in the first person are fine. What he has seen, watched or tested
+  is a personal claim too: no "I've watched teams...", "most teams I see", "I spent last month".
 - The humour limits apply to every post, straight ones too: no jokes at the expense of interns,
   juniors, job seekers, non-technical colleagues or users, even as a passing comparison.
-- Facts about recent events come only from the research you are given. If the research is empty,
-  write without news references. No made-up statistics, no "studies show".
+- Facts about recent events come only from the research you are given, with companies and
+  products named exactly as the research names them. If the research is empty, write without
+  news references. No made-up statistics, no "studies show", and no specific numbers in
+  hypothetical examples ("a $$10,000 refund"): they read as facts.
 - Plain words. Real opinions. Specific situations instead of "businesses everywhere".
 - Vary sentence length a lot. A slightly imperfect rhythm is better than a polished slogan.
 - Steer well clear of the banned words and patterns. Automated checks reject the post outright if
-  any appear, so don't use them even in quotes or to make fun of them.
+  any appear, so don't use them even in quotes or to make fun of them. The ones that slip in most:
+  - em dashes: at most one in the whole post, and none is better. Use a full stop or a comma.
+  - the contrast setup in any wording: "X isn't A. It's B", "they aren't A, they're B", "it's
+    not A, it's B". Just say B.
+  - lists of three parallel items ("permissions, VPCs, and observability"): one per post at most.
+  - three sentences in a row starting with the same word ("No logging. No way to stop. No...").
 
 Write the post as plain text the way it will appear on LinkedIn: no markdown, no headings, no bold.
 Separate paragraphs with a blank line, and put the hashtags on their own line at the end.
