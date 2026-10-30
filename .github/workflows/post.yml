@@ -49,11 +49,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # No pip cache: the dependencies install from PyPI in seconds, while GitHub's cache
+      # service sometimes throttles downloads until the job times out.
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-          cache: pip
-          cache-dependency-path: pyproject.toml
 
       - name: Install
         run: pip install -e .
