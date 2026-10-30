@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import asdict
 from datetime import date
 
 import pytest
@@ -16,6 +17,7 @@ from agent.news import (
     pick_story,
     rank_candidates,
     score,
+    story_notes,
 )
 from agent.state import History, NewsStory, PostRecord, Source
 from fakes import FakeLLM, FakeSources, article, seq
@@ -185,6 +187,26 @@ def test_pick_story_verifies_against_fetched_text() -> None:
     assert [c["label"] for c in llm.calls] == ["news.scan", "news.verify"]
     assert "Vendor released SDK 2.0 on Monday." in llm.calls[1]["prompt"]
     assert sources.fetched == [SDK_NEWS.url, SDK_PRESS.url]
+
+
+def test_verified_details_are_kept_and_shown_to_the_writer() -> None:
+    reply = verified(details=["Ships a Python SDK.", "Supports retries."])
+    llm = FakeLLM(
+        {"news.scan": {"candidates": [cand("Good story", relevance=5)]}, "news.verify": reply}
+    )
+    story = pick_story(llm, Config(), news_sources(), TODAY, History())
+    assert story.details == ["Ships a Python SDK.", "Supports retries."]
+    notes = story_notes(story)
+    assert (
+        "Details stated in the articles:\n   - Ships a Python SDK.\n   - Supports retries." in notes
+    )
+    assert NewsStory.from_dict(asdict(story)).details == story.details  # saved in history.json
+
+
+def test_old_history_without_details_still_loads() -> None:
+    story = NewsStory.from_dict({"key": "k", "title": "t"})
+    assert story.details == []
+    assert "Details stated" not in story_notes(story)
 
 
 def test_official_source_is_listed_first() -> None:

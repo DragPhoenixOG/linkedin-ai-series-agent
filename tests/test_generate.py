@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from agent.config import Config
 from agent.generate import generate_post
+from agent.lint import LintLimits, lint_post
 from conftest import CLEAN_POST
 from fakes import FakeLLM, seq
 from test_writer_editor import EMPTY_TEMPLATE, brief
@@ -150,3 +151,18 @@ def test_a_note_that_nothing_is_wrong_does_not_block_a_good_post() -> None:
     result = generate_post(llm, Config(), brief())
     assert result.success
     assert len(result.attempts) == 1
+
+
+def test_editor_sees_the_code_checks_for_the_exact_text() -> None:
+    llm = FakeLLM(
+        {
+            "writer": seq(f"<post>{BAD_POST}</post>", f"<post>{CLEAN_POST}</post>"),
+            "editor": review(9, ""),
+        }
+    )
+    generate_post(llm, Config(), brief())
+    first, second = [c["prompt"] for c in llm.calls if c["label"] == "editor"]
+    words = lint_post(CLEAN_POST, LintLimits.from_config(Config()), []).word_count
+    assert "robust" in first and "Banned phrase" in first
+    assert f"The draft has {words} words" in second
+    assert "Nothing: all checks passed." in second

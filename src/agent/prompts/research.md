@@ -24,10 +24,16 @@ $articles
 
 Reply with only this JSON inside <result></result> tags:
 
+For each development also give up to 4 "details": specific facts the excerpt states, such as
+what exactly was built or released, how it works, who uses it, names and numbers. The post may
+use only these specifics, so pick the ones a writer would want, and copy nothing the text
+doesn't say.
+
 <result>
 {"developments": [
   {"summary": "One or two plain sentences: what happened, who did it.",
    "why_it_matters": "One sentence on why it matters for engineers or enterprise reliability.",
+   "details": ["A specific fact the article states.", "Another one."],
    "article_ids": ["A1"]}
 ]}
 </result>

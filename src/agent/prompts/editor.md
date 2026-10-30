@@ -7,7 +7,9 @@ Subject: $subject_line
 
 ## Research the post may rely on
 
-Claims about recent events must match this. Anything else about recent events must go.
+Claims about recent events must match this. Anything else about recent events must go,
+including specifics about these companies or products (what they built, how it works, who uses
+it, examples, numbers) that aren't in the summary or the listed details.
 
 $research
 
@@ -21,25 +23,34 @@ $recent_posts
 $draft
 </draft>
 
+## Automated checks (exact, done by code)
+
+$checks
+
+Code checks length, em dashes, hashtags, emoji, links, banned words and the banned patterns
+(contrast setups, lists of three, repeated sentence starts). Don't count or report those
+yourself; the writer gets the code's results directly.
+
 ## What to do
 
 1. human_score: score the draft 1-10 on "sounds like a real person wrote it".
 2. ai_sounding: list every sentence that sounds like AI, corporate or generic, each with a short
    reason. Quote the sentence exactly.
 3. fact_problems: list claims not supported by the research or the author facts (invented
-   numbers, overstated product capabilities, made-up personal stories, rumours stated as fact).
+   numbers, overstated product capabilities, made-up personal stories, rumours stated as fact,
+   wrong dates such as "last week" for something from yesterday). Start each item with the
+   exact sentence in quotes, then say why. Before listing a sentence, check it against the
+   author facts: his own OMS, marketplace, ERP, order and returns work is in there and is fine.
    Check every sentence with "I", "we", "our" or "my": if what it says Ashish or his team did
    isn't in the author facts, it's a made-up personal story. List it. That includes the
    industry "we" ("We spent two years...", "we keep building..."): readers take it as his own
    story. So does what he has seen, watched or tested ("I've watched teams...", "most teams I
    see", "I spent last month..."). First-person opinions ("I think...") are fine. Hypothetical
    examples with specific numbers ("a $$10,000 refund", "2% of SKUs") read as facts: list them.
-   rule_problems: list anything that breaks a written rule of the style guide (banned words or
-   patterns, length, hashtags, emoji, numbering, implying the series ends), including the humour
-   hard limits even in a straight post (for example a joke at the expense of interns or junior
-   people). The limits for this post: $min_words to $max_words words, at most $max_hashtags
-   hashtags, at most one em dash, at most one link. The format above was chosen on purpose, so
-   don't flag it.
+   rule_problems: only the rules code can't check: the humour hard limits (even in a straight
+   post, for example a joke at the expense of interns or junior people), anything implying the
+   series is ending or numbering posts, and naming clients or brands from his work. The format
+   above was chosen on purpose, so don't flag it.
    Both lists hold problems only. If there are none, return an empty list. Never add notes that
    something is fine, allowed or correctly cited.
    These lists are what the writer fixes, so make them complete: anything you don't list stays.

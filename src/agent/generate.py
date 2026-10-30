@@ -101,8 +101,8 @@ def generate_post(llm: LLM, config: Config, brief: PostBrief) -> GenerationResul
     previous: str | None = None
     for number in range(1, config.max_attempts + 1):
         text = write_draft(llm, config, brief, feedback=feedback, previous=previous)
-        review = edit_draft(llm, config, brief, text)
         lint = lint_post(text, limits, brief.recent_posts)
+        review = edit_draft(llm, config, brief, text, checks=lint)
         problems = score_problems(review, brief, config)
         problems += [f"Lint [{i.rule}]: {i.detail}" for i in lint.issues]
         attempt = Attempt(number, text, review, lint, problems)
