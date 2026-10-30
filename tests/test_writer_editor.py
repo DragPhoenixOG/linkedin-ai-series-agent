@@ -252,3 +252,23 @@ def test_prompts_cover_the_industry_we_and_empty_lists() -> None:
     editor_prompt = llm.calls[1]["prompt"]
     assert 'industry "we"' in editor_prompt
     assert "return an empty list" in editor_prompt
+
+
+@pytest.mark.parametrize(
+    ("value", "score"),
+    [
+        (8, 8),
+        (8.6, 9),
+        ("7", 7),
+        ("8/10", 8),
+        (" 6.5 out of 10", 6),
+        ({"score": 9}, 9),
+        (14, 10),
+        (-2, 0),
+        ("n/a", 0),
+        (None, 0),
+        (True, 0),
+    ],
+)
+def test_scores_in_other_shapes_are_read(value, score) -> None:
+    assert parse_review({"human_score": value, "rewrite": "x"}, humorous=False).human_score == score

@@ -80,10 +80,15 @@ class EditorReview:
 
 
 def _clamp_score(value: Any) -> int:
-    try:
-        return max(0, min(10, int(value)))
-    except (TypeError, ValueError):
+    """A 0-10 whole number from 8, 8.5, "8", "8/10" or {"score": 8}; 0 if there's none."""
+    if isinstance(value, dict):
+        value = value.get("score", value.get("value"))
+    if isinstance(value, bool) or value is None:
         return 0
+    if isinstance(value, int | float):
+        return max(0, min(10, round(value)))
+    match = re.match(r"\s*(\d+(?:\.\d+)?)", str(value))
+    return max(0, min(10, round(float(match.group(1))))) if match else 0
 
 
 # Weaker models fill the problem lists with notes that something is fine ("No factual problems
@@ -195,7 +200,15 @@ def edit_draft(
     if review.is_complete(humorous):
         return review
     # Weaker models sometimes return the JSON shape with zeros and blanks. Ask once more.
-    log_event(logger, "editor.incomplete", logging.WARNING, score=review.human_score)
+    raw = data if isinstance(data, dict) else {}
+    log_event(
+        logger,
+        "editor.incomplete",
+        logging.WARNING,
+        score=review.human_score,
+        keys=",".join(sorted(raw))[:200] or type(data).__name__,
+        human_score=repr(raw.get("human_score"))[:60],
+    )
     retry_prompt = f"{prompt}\n\n{fragment('editor_incomplete')}"
     data, _ = llm.complete_json(label="editor.retry", prompt=retry_prompt, **request)
     return parse_review(data, humorous)
