@@ -135,7 +135,27 @@ def test_compat_json_schema_becomes_an_instruction() -> None:
     prompt = seen[0]["messages"][1]["content"]
     assert prompt.startswith("Judge it.")
     assert "Reply with only one JSON object" in prompt and '"ok"' in prompt
-    assert "response_format" not in seen[0]
+    assert seen[0]["response_format"] == {"type": "json_object"}
+
+
+def test_compat_drops_json_mode_when_the_endpoint_rejects_it() -> None:
+    seen: list[dict] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        body = json.loads(request.content)
+        seen.append(body)
+        if "response_format" in body:
+            return httpx.Response(400, json={"error": {"message": "response_format not supported"}})
+        return httpx.Response(200, json=chat_reply('{"ok": true}'))
+
+    llm = compat(handler)
+    schema = {"type": "object", "required": ["ok"]}
+    for _ in range(2):
+        data, _ = llm.complete_json(
+            label="t", model="m", system=["s"], prompt="p", json_schema=schema
+        )
+        assert data == {"ok": True}
+    assert ["response_format" in b for b in seen] == [True, False, False]  # asked once per model
 
 
 def test_compat_retries_rate_limits_and_server_errors() -> None:

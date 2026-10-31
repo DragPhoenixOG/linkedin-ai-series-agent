@@ -216,6 +216,7 @@ class OpenAICompatLLM(LLM):
         self.max_retries = max_retries
         self._sleep = sleep
         self._overloaded: set[str] = set()  # models that kept failing this run
+        self._no_json_mode: set[str] = set()  # models whose endpoint rejected JSON mode
 
     def _model_for(self, model: str) -> str:
         fallback = self.config.fallback_model
@@ -299,7 +300,7 @@ class OpenAICompatLLM(LLM):
     ) -> LLMResponse:
         if json_schema is not None:
             prompt = f"{prompt}\n\n{render('json_reply', schema=json.dumps(json_schema, indent=1))}"
-        body = {
+        body: dict[str, Any] = {
             "model": self._model_for(model),
             "messages": [
                 {"role": "system", "content": "\n\n".join(s for s in system if s)},
@@ -307,7 +308,20 @@ class OpenAICompatLLM(LLM):
             ],
             "max_tokens": min(max_tokens, self.config.max_output_tokens),
         }
-        data = self._post(label, body)
+        if json_schema is not None and body["model"] not in self._no_json_mode:
+            # JSON mode makes the server return valid JSON (no stray quotes or fences).
+            body["response_format"] = {"type": "json_object"}
+            try:
+                data = self._post(label, body)
+            except LLMError as exc:
+                if "request rejected" not in str(exc):
+                    raise
+                log_event(logger, "llm.json_mode_unsupported", logging.WARNING, model=body["model"])
+                self._no_json_mode.add(body["model"])
+                del body["response_format"]
+                data = self._post(label, body)
+        else:
+            data = self._post(label, body)
         model = body["model"]  # the fallback, if the requested model was overloaded
         usage = data.get("usage") or {}
         call = self.usage.add(
