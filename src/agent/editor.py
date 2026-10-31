@@ -181,6 +181,7 @@ def edit_draft(
         research=brief.research_notes,
         recent_posts=format_recent_posts(brief.recent_posts),
         draft=draft,
+        today=brief.today.isoformat(),
         checks=describe_checks(checks),
         humour_instruction=fragment("editor_humour" if humorous else "editor_straight"),
         min_words=config.min_words,

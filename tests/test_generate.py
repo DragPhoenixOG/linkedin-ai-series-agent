@@ -242,3 +242,26 @@ def test_fix_rounds_are_capped() -> None:
     assert not result.success
     assert [c["label"] for c in llm.calls].count("writer.fix") == 2
     assert len(result.attempts) == 5 + 2  # 5 full drafts, 2 fix rounds, then it stops
+
+
+def test_a_slightly_short_post_gets_a_sentence_fix_not_a_redraft() -> None:
+    first = CLEAN_POST.splitlines()[0]
+    short = "\n".join(line for line in CLEAN_POST.splitlines() if line and line != first)
+    llm = FakeLLM(
+        {
+            "writer": f"<post>{short}</post>",
+            "editor": review(9, ""),
+            "writer.fix": {
+                "edits": [
+                    {
+                        "find": short.splitlines()[0],
+                        "replace": first + "\n\n" + short.splitlines()[0],
+                    }
+                ]
+            },
+        }
+    )
+    result = generate_post(llm, Config(min_words=len(short.split()) + 1), brief())
+    assert any("length" in p for p in result.attempts[0].problems)
+    assert [c["label"] for c in llm.calls].count("writer") == 1
+    assert "writer.fix" in [c["label"] for c in llm.calls]

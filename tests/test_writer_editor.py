@@ -284,3 +284,11 @@ def test_an_unreadable_review_fails_the_attempt_instead_of_the_run() -> None:
     review = edit_draft(llm, Config(), brief(), "Draft text")
     assert review.human_score == 0 and not review.is_complete(humorous=False)
     assert [c["label"] for c in llm.calls] == ["editor", "editor.retry"]
+
+
+def test_editor_knows_today_and_what_is_not_a_fact_problem() -> None:
+    llm = FakeLLM({"editor": {"human_score": 9, "rewrite": "x"}})
+    edit_draft(llm, Config(), brief(), "x")
+    prompt = llm.calls[0]["prompt"]
+    assert "Today is 2026-10-28." in prompt
+    assert "Not fact problems, so never list these" in prompt and '"Picture..."' in prompt
