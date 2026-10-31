@@ -36,6 +36,20 @@ def test_extract_json_prefers_result_tags() -> None:
     assert extract_json(text) == {"right": 2}
 
 
+def test_extract_json_accepts_raw_line_breaks_in_strings() -> None:
+    text = '{"human_score": 8, "rewrite": "Line one.\nLine two."}'
+    assert extract_json(text)["rewrite"] == "Line one.\nLine two."
+
+
+def test_extract_json_skips_fragments_without_required_keys() -> None:
+    broken = 'Review: {"human_score": 8, "ai_sounding": [{"sentence": "x", "reason": "y"}], oops'
+    assert extract_json(broken) == [{"sentence": "x", "reason": "y"}]  # old behaviour
+    with pytest.raises(LLMError):
+        extract_json(broken, required=["human_score"])
+    good = broken + '\n<result>{"human_score": 7, "rewrite": "r"}</result>'
+    assert extract_json(good, required=["human_score"])["human_score"] == 7
+
+
 def test_extract_json_handles_fences_and_prose() -> None:
     assert extract_json('Here:\n```json\n{"a": [1, 2]}\n```') == {"a": [1, 2]}
     assert extract_json('Sure! {"a": 1} hope that helps') == {"a": 1}
