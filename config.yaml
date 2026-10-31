@@ -19,7 +19,7 @@ post_time_utc: "03:30"            # the workflow cron runs daily at this time (9
 llm_provider: bedrock-openai
 writer_model: moonshotai.kimi-k2.5      # groq: openai/gpt-oss-120b   anthropic: claude-sonnet-5-5
                                     # bedrock: anthropic.claude-sonnet-5-5 (same for the next two)
-editor_model: mistral.mistral-large-3-675b-instruct      # groq: openai/gpt-oss-120b   anthropic: claude-sonnet-5-5
+editor_model: openai.gpt-5.5      # groq: openai/gpt-oss-120b   anthropic: claude-sonnet-5-5
 research_model: deepseek.v3.2  # groq: openai/gpt-oss-120b   anthropic: claude-sonnet-5-5
 llm_base_url: https://bedrock-mantle.us-east-1.api.aws/v1                   # optional override for any OpenAI-compatible endpoint
 llm_api_key_env: AWS_BEARER_TOKEN_BEDROCK                # optional override for the env var holding the key
