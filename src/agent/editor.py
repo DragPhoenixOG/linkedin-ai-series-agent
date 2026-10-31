@@ -14,7 +14,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from agent.config import Config
-from agent.lint import LintResult
+from agent.lint import LintResult, sentences
 from agent.llm import LLM, LLMAuthError, LLMError
 from agent.logs import log_event
 from agent.templates import fragment, render
@@ -158,6 +158,37 @@ def parse_review(data: Any, humorous: bool) -> EditorReview:
     )
 
 
+# A first-person subject followed closely by a past action or a past time: "I made an order
+# yesterday", "we've spent the last year", "my team shipped". Opinions ("I think") don't match.
+_FIRST_PERSON = r"\b(?:I|I've|I'd|we|we've|we'd|our team|my team|us)\b"
+_PAST_ACTION = (
+    r"\b(?:\w+ed|made|saw|seen|spent|built|wrote|ran|shipped|went|did|done|had|took|got|sat|"
+    r"watched|tested|launched|learned|learnt|found|heard|met|led|broke|lost|told|asked)\b"
+)
+_PAST_TIME = r"\b(?:yesterday|last (?:week|month|year|quarter)|years? ago|months? ago|recently)\b"
+_PERSONAL_CLAIM = re.compile(
+    rf"{_FIRST_PERSON}(?:\W+\w+){{0,3}}?\W+{_PAST_ACTION}|{_FIRST_PERSON}.*{_PAST_TIME}",
+    re.IGNORECASE,
+)
+
+
+def personal_claims(text: str) -> list[str]:
+    """Sentences where the author seems to say he did, saw or made something."""
+    return [s for s in sentences(text) if _PERSONAL_CLAIM.search(s)]
+
+
+def describe_personal_claims(draft: str) -> str:
+    found = personal_claims(draft)
+    if not found:
+        return "None found."
+    lines = "\n".join(f'- "{s}"' for s in found)
+    return (
+        'These sentences say Ashish (or "we") did, saw or made something. Check each one '
+        "against the author facts. Any that the author facts don't back up go in fact_problems "
+        "as made-up personal stories.\n" + lines
+    )
+
+
 def describe_checks(checks: LintResult | None) -> str:
     """What the deterministic lint found, so the editor doesn't count words or dashes itself."""
     if checks is None:
@@ -183,6 +214,7 @@ def edit_draft(
         draft=draft,
         today=brief.today.isoformat(),
         checks=describe_checks(checks),
+        personal_claims=describe_personal_claims(draft),
         humour_instruction=fragment("editor_humour" if humorous else "editor_straight"),
         min_words=config.min_words,
         max_words=config.max_words,

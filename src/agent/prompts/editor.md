@@ -31,6 +31,10 @@ Code checks length, em dashes, hashtags, emoji, links, banned words and the bann
 (contrast setups, lists of three, repeated sentence starts). Don't count or report those
 yourself; the writer gets the code's results directly.
 
+## Personal claims to check
+
+$personal_claims
+
 ## What to do
 
 1. human_score: score the draft 1-10 on "sounds like a real person wrote it".
