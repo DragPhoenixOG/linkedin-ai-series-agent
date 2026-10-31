@@ -2,16 +2,21 @@
 
 from __future__ import annotations
 
+import logging
 import re
 from dataclasses import dataclass, field
 from datetime import date
 from pathlib import Path
+from typing import Any
 
 from agent.config import Config
 from agent.lint import ends_with_question, has_bullets, opening_line
-from agent.llm import LLM, LLMError
+from agent.llm import LLM, LLMAuthError, LLMError
+from agent.logs import log_event
 from agent.state import NewsStory
 from agent.templates import fragment, render
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -167,3 +172,54 @@ def write_draft(
         max_tokens=16000,
     )
     return extract_post(response.text)
+
+
+FIX_SCHEMA: dict[str, Any] = {
+    "type": "object",
+    "properties": {
+        "edits": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {"find": {"type": "string"}, "replace": {"type": "string"}},
+                "required": ["find", "replace"],
+            },
+        }
+    },
+    "required": ["edits"],
+}
+
+
+def fix_sentences(
+    llm: LLM, config: Config, brief: PostBrief, post: str, problems: list[str]
+) -> str | None:
+    """Rewrite only the sentences with problems, spliced in by code so nothing else changes.
+
+    Returns the edited post, or None if no edit could be applied (the caller then revises the
+    whole post instead).
+    """
+    prompt = render("fix_sentences", post=post, problems="\n".join(f"- {p}" for p in problems))
+    try:
+        data, _ = llm.complete_json(
+            label="writer.fix",
+            model=config.writer_model,
+            system=[brief.voice.system_block(), render("system_writer")],
+            prompt=prompt,
+            effort=config.writer_effort,
+            max_tokens=4000,
+            json_schema=FIX_SCHEMA,
+        )
+    except LLMAuthError:
+        raise
+    except LLMError:
+        return None
+    edits = data.get("edits", []) if isinstance(data, dict) else []
+    text, applied = post, 0
+    for item in edits:
+        if not isinstance(item, dict):
+            continue
+        find, replace = str(item.get("find", "")).strip(), str(item.get("replace", "")).strip()
+        if find and text.count(find) == 1:
+            text, applied = text.replace(find, replace), applied + 1
+    log_event(logger, "writer.fix", edits=len(edits), applied=applied)
+    return tidy_post(re.sub(r"[ \t]{2,}", " ", text)) if applied else None
