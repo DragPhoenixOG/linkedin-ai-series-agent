@@ -47,7 +47,7 @@ class Config:
 
     min_editor_score: int = 8
     min_humour_score: int = 7
-    max_attempts: int = 3
+    max_attempts: int = 5
 
     news_post_ratio: float = 0.33
     news_lookback_days: int = 7

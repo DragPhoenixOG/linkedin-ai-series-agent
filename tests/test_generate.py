@@ -105,12 +105,18 @@ def test_gives_up_after_max_attempts_and_returns_best() -> None:
     llm = FakeLLM(
         {
             "writer": f"<post>{BAD_POST}</post>",
-            "editor": seq(review(5, BAD_POST), review(7, BAD_POST), review(6, BAD_POST)),
+            "editor": seq(
+                review(5, BAD_POST),
+                review(7, BAD_POST),
+                review(6, BAD_POST),
+                review(6, BAD_POST),
+                review(5, BAD_POST),
+            ),
         }
     )
     result = generate_post(llm, Config(), brief())
     assert not result.success
-    assert len(result.attempts) == 3
+    assert len(result.attempts) == Config().max_attempts == 5
     assert result.best.number == 2  # same lint problems, highest editor score
     assert any("banned_phrase" in p for p in result.best.problems)
 

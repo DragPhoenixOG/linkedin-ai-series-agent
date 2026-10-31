@@ -59,7 +59,7 @@ max_links: 1
 # --- Quality gates --------------------------------------------------------
 min_editor_score: 8
 min_humour_score: 7
-max_attempts: 3
+max_attempts: 5                     # write -> edit -> lint rounds before giving up (brief: 3; raised to 5, Oct 2026)
 
 # --- Content mix (section 2a) ---------------------------------------------
 news_post_ratio: 0.33
