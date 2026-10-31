@@ -55,7 +55,10 @@ FORMATS: dict[str, Format] = {
         Format(
             "story",
             "Mini story",
-            "A short scenario. Make it clearly hypothetical unless it comes from the author facts.",
+            "A short scenario. Unless it comes from the author facts, the opening words mark it "
+            'as made up ("Picture a retailer whose...", "Say a returns agent goes live on a '
+            'Tuesday...") and it stays plainly hypothetical: no "we", "our" or "I" inside the '
+            "story, and no oddly specific details that read like a real incident.",
         ),
         Format(
             "news_reaction",

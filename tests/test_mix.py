@@ -110,3 +110,10 @@ def test_override_warnings() -> None:
         "override makes two humorous posts in a row",
     ]
     assert check_overrides([SKILL], [STRAIGHT], NEWS, HUMOROUS) == []
+
+
+def test_mini_story_asks_for_an_explicitly_hypothetical_opening() -> None:
+    from agent.mix import FORMATS
+
+    story = FORMATS["story"]
+    assert "Picture a retailer" in story.description and '"we"' in story.description
