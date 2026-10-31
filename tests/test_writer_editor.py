@@ -272,3 +272,15 @@ def test_prompts_cover_the_industry_we_and_empty_lists() -> None:
 )
 def test_scores_in_other_shapes_are_read(value, score) -> None:
     assert parse_review({"human_score": value, "rewrite": "x"}, humorous=False).human_score == score
+
+
+def test_an_unreadable_review_fails_the_attempt_instead_of_the_run() -> None:
+    class BrokenJSON(FakeLLM):
+        def complete_json(self, **kwargs):
+            self.calls.append(kwargs)
+            raise LLMError("Model response did not contain valid JSON")
+
+    llm = BrokenJSON({})
+    review = edit_draft(llm, Config(), brief(), "Draft text")
+    assert review.human_score == 0 and not review.is_complete(humorous=False)
+    assert [c["label"] for c in llm.calls] == ["editor", "editor.retry"]

@@ -15,7 +15,7 @@ from typing import Any
 
 from agent.config import Config
 from agent.lint import LintResult
-from agent.llm import LLM
+from agent.llm import LLM, LLMAuthError, LLMError
 from agent.logs import log_event
 from agent.templates import fragment, render
 from agent.writer import PostBrief, format_recent_posts, tidy_post
@@ -195,7 +195,14 @@ def edit_draft(
         "max_tokens": 16000,
         "json_schema": EDITOR_SCHEMA,
     }
-    data, _ = llm.complete_json(label="editor", prompt=prompt, **request)
+    try:
+        data, _ = llm.complete_json(label="editor", prompt=prompt, **request)
+    except LLMAuthError:
+        raise
+    except LLMError as exc:
+        # An unreadable review fails this attempt; it shouldn't end the whole run.
+        log_event(logger, "editor.unreadable", logging.WARNING, error=str(exc)[:200])
+        data = None
     review = parse_review(data, humorous)
     if review.is_complete(humorous):
         return review
@@ -210,5 +217,11 @@ def edit_draft(
         human_score=repr(raw.get("human_score"))[:60],
     )
     retry_prompt = f"{prompt}\n\n{fragment('editor_incomplete')}"
-    data, _ = llm.complete_json(label="editor.retry", prompt=retry_prompt, **request)
+    try:
+        data, _ = llm.complete_json(label="editor.retry", prompt=retry_prompt, **request)
+    except LLMAuthError:
+        raise
+    except LLMError as exc:
+        log_event(logger, "editor.unreadable", logging.WARNING, error=str(exc)[:200])
+        data = None
     return parse_review(data, humorous)
