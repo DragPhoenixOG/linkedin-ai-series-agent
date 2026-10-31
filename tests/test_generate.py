@@ -9,6 +9,7 @@ from conftest import CLEAN_POST
 from fakes import FakeLLM, seq
 from test_writer_editor import EMPTY_TEMPLATE, brief
 
+NO_EDITS = {"edits": []}
 BAD_POST = CLEAN_POST.replace("boring engineering", "robust engineering")
 
 
@@ -64,6 +65,7 @@ def test_the_editor_rewrite_is_never_posted() -> None:
 def test_a_failing_draft_is_not_rescued_by_a_clean_rewrite() -> None:
     llm = FakeLLM(
         {
+            "writer.fix": NO_EDITS,  # nothing applies: fall back to a full revision
             "writer": seq(f"<post>{BAD_POST}</post>", f"<post>{CLEAN_POST}</post>"),
             "editor": review(9, CLEAN_POST),
         }
@@ -77,6 +79,7 @@ def test_a_failing_draft_is_not_rescued_by_a_clean_rewrite() -> None:
 def test_lint_failure_feeds_back_rule() -> None:
     llm = FakeLLM(
         {
+            "writer.fix": NO_EDITS,  # nothing applies: fall back to a full revision
             "writer": seq(f"<post>{BAD_POST}</post>", f"<post>{CLEAN_POST}</post>"),
             "editor": seq(review(9, BAD_POST), review(9, CLEAN_POST)),
         }
@@ -126,7 +129,11 @@ def test_unsupported_claims_force_another_round_even_with_a_good_score() -> None
         "fact_problems": ["'We broke our test data' is not in the author facts."]
     }
     llm = FakeLLM(
-        {"writer": f"<post>{CLEAN_POST}</post>", "editor": seq(invented, review(9, CLEAN_POST))}
+        {
+            "writer.fix": NO_EDITS,  # nothing applies: fall back to a full revision
+            "writer": f"<post>{CLEAN_POST}</post>",
+            "editor": seq(invented, review(9, CLEAN_POST)),
+        }
     )
     result = generate_post(llm, Config(), brief())
     assert result.success
@@ -162,6 +169,7 @@ def test_a_note_that_nothing_is_wrong_does_not_block_a_good_post() -> None:
 def test_editor_sees_the_code_checks_for_the_exact_text() -> None:
     llm = FakeLLM(
         {
+            "writer.fix": NO_EDITS,  # nothing applies: fall back to a full revision
             "writer": seq(f"<post>{BAD_POST}</post>", f"<post>{CLEAN_POST}</post>"),
             "editor": review(9, ""),
         }
@@ -172,3 +180,33 @@ def test_editor_sees_the_code_checks_for_the_exact_text() -> None:
     assert "robust" in first and "Banned phrase" in first
     assert f"The draft has {words} words" in second
     assert "Nothing: all checks passed." in second
+
+
+def test_a_nearly_there_post_only_gets_its_flagged_sentence_replaced() -> None:
+    bad_sentence = next(line for line in BAD_POST.splitlines() if "robust" in line)
+    good_sentence = bad_sentence.replace("robust engineering", "boring engineering")
+    llm = FakeLLM(
+        {
+            "writer": f"<post>{BAD_POST}</post>",
+            "editor": review(9, ""),
+            "writer.fix": {"edits": [{"find": bad_sentence, "replace": good_sentence}]},
+        }
+    )
+    result = generate_post(llm, Config(), brief())
+    assert result.success and len(result.attempts) == 2
+    assert result.best.text == CLEAN_POST  # everything else untouched
+    assert [c["label"] for c in llm.calls].count("writer") == 1  # no full redraft
+    fix_prompt = next(c["prompt"] for c in llm.calls if c["label"] == "writer.fix")
+    assert "banned_phrase" in fix_prompt and bad_sentence in fix_prompt
+
+
+def test_low_scores_still_get_a_full_revision() -> None:
+    llm = FakeLLM(
+        {
+            "writer": seq(f"<post>{BAD_POST}</post>", f"<post>{CLEAN_POST}</post>"),
+            "editor": seq(review(6, ""), review(9, "")),
+        }
+    )
+    result = generate_post(llm, Config(), brief())
+    assert result.success
+    assert "writer.fix" not in [c["label"] for c in llm.calls]

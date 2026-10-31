@@ -21,7 +21,7 @@ from agent.editor import EditorReview, edit_draft
 from agent.lint import LintLimits, LintResult, lint_post
 from agent.llm import LLM
 from agent.logs import log_event
-from agent.writer import PostBrief, write_draft
+from agent.writer import PostBrief, fix_sentences, write_draft
 
 logger = logging.getLogger(__name__)
 
@@ -99,8 +99,9 @@ def generate_post(llm: LLM, config: Config, brief: PostBrief) -> GenerationResul
     result = GenerationResult()
     feedback: str | None = None
     previous: str | None = None
+    fixed: str | None = None
     for number in range(1, config.max_attempts + 1):
-        text = write_draft(llm, config, brief, feedback=feedback, previous=previous)
+        text = fixed or write_draft(llm, config, brief, feedback=feedback, previous=previous)
         lint = lint_post(text, limits, brief.recent_posts)
         review = edit_draft(llm, config, brief, text, checks=lint)
         problems = score_problems(review, brief, config)
@@ -121,4 +122,32 @@ def generate_post(llm: LLM, config: Config, brief: PostBrief) -> GenerationResul
             break
         feedback = build_feedback(attempt)
         previous = text
+        fixed = None
+        if number < config.max_attempts and only_sentence_problems(attempt, brief, config):
+            # Scores already pass: change just the flagged sentences rather than redraft, so the
+            # rest of a nearly-there post can't pick up new problems.
+            fixed = fix_sentences(llm, config, brief, text, sentence_problems(attempt))
     return result
+
+
+# Lint rules whose problems sit in one sentence and can be fixed there.
+LOCAL_RULES = {"banned_phrase", "em_dash", "not_x_its_y", "repeated_sentence_start", "triad"}
+
+
+def only_sentence_problems(attempt: Attempt, brief: PostBrief, config: Config) -> bool:
+    """True when the editor's scores pass and every remaining problem is in specific sentences."""
+    review = attempt.review
+    if not review.is_complete(brief.tone == "humorous"):
+        return False
+    if review.human_score < config.min_editor_score:
+        return False
+    if brief.tone == "humorous" and (review.humour_score or 0) < config.min_humour_score:
+        return False
+    return all(i.rule in LOCAL_RULES for i in attempt.lint.issues)
+
+
+def sentence_problems(attempt: Attempt) -> list[str]:
+    """The lint issues and fact problems to fix sentence by sentence."""
+    items = [f"Lint [{i.rule}]: {i.detail}" for i in attempt.lint.issues]
+    items += [f"Unsupported claim: {p}" for p in attempt.review.fact_problems]
+    return items
