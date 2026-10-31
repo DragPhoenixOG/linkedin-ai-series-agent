@@ -16,7 +16,7 @@ import os
 import re
 import time
 from abc import ABC, abstractmethod
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from typing import Any
 
@@ -105,24 +105,36 @@ class LLMResponse:
     stop_reason: str = "end_turn"
 
 
-def extract_json(text: str) -> Any:
-    """Parse JSON from model text: `<result>` tags first, then fenced blocks, then raw braces."""
+def extract_json(text: str, required: Sequence[str] = ()) -> Any:
+    """Parse JSON from model text: `<result>` tags first, then fenced blocks, then raw braces.
+
+    Raw line breaks inside strings are accepted (some models put them in long text fields). With
+    `required`, only an object holding all those keys counts, so a fragment of a broken reply
+    (one list item, say) is never mistaken for the whole answer.
+    """
     candidates = re.findall(r"<result>\s*(.*?)\s*</result>", text, re.DOTALL)[::-1]
     candidates += re.findall(r"```(?:json)?\s*(.*?)```", text, re.DOTALL)[::-1]
     candidates.append(text)
-    decoder = json.JSONDecoder()
+    decoder = json.JSONDecoder(strict=False)
+
+    def acceptable(value: Any) -> bool:
+        return not required or (isinstance(value, dict) and all(k in value for k in required))
+
     for candidate in candidates:
         candidate = candidate.strip()
         try:
-            return json.loads(candidate)
+            value = decoder.decode(candidate)
+            if acceptable(value):
+                return value
         except json.JSONDecodeError:
             pass
         for start in (m.start() for m in re.finditer(r"[{\[]", candidate)):
             try:
                 value, _ = decoder.raw_decode(candidate[start:])
-                return value
             except json.JSONDecodeError:
                 continue
+            if acceptable(value):
+                return value
     raise LLMError("Model response did not contain valid JSON")
 
 
@@ -153,11 +165,19 @@ class LLM(ABC):
 
     def complete_json(self, **kwargs: Any) -> tuple[Any, LLMResponse]:
         """Like `complete`, then parse JSON. Asks once more if the first reply isn't valid JSON."""
+        schema = kwargs.get("json_schema") or {}
+        required = schema.get("required", []) if schema.get("type") == "object" else []
         response = self.complete(**kwargs)
         try:
-            return extract_json(response.text), response
+            return extract_json(response.text, required), response
         except LLMError:
-            log_event(logger, "llm.bad_json", logging.WARNING, label=kwargs.get("label"))
+            log_event(
+                logger,
+                "llm.bad_json",
+                logging.WARNING,
+                label=kwargs.get("label"),
+                start=response.text[:120].replace("\n", " "),
+            )
         retry = dict(kwargs)
         retry["label"] = f"{kwargs['label']}.retry"
         retry["prompt"] = (
@@ -165,7 +185,7 @@ class LLM(ABC):
             "Reply again with only the JSON, nothing else."
         )
         response = self.complete(**retry)
-        return extract_json(response.text), response
+        return extract_json(response.text, required), response
 
 
 # Consecutive overload errors (5xx or timeouts) before switching to `fallback_model`.
