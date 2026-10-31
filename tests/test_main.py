@@ -266,7 +266,7 @@ def test_failed_generation_returns_failure_and_shows_reasons(root: Path) -> None
     )
     code, output = go(root, llm, "--dry-run", "--force")
     assert code == EXIT_FAILED
-    assert "FAILED after 3 attempts" in output
+    assert "FAILED after 5 attempts" in output
     assert "[length]" in output
 
 

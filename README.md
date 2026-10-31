@@ -24,7 +24,7 @@ Every day at 03:30 UTC (9:00 AM IST) a GitHub Actions run:
    needs 2 independent sources or 1 official one, and every key fact is checked.
 4. Writes the post, has a separate "blunt editor" pass score it and flag every weak or
    unsupported sentence, and runs deterministic lint checks. The writer fixes what was flagged,
-   up to 3 attempts. Only text the editor scored and lint passed can be posted.
+   up to 5 attempts. Only text the editor scored and lint passed can be posted.
 5. Publishes through the LinkedIn Posts API, commits the updated history back to the repo, and
    opens a GitHub issue with the post, link, scores and sources.
 
@@ -47,7 +47,7 @@ flowchart TD
     research --> write["Writer pass"]
     write --> edit["Editor pass: scores and flags problems"]
     edit --> lint{"Lint clean and scores high enough?"}
-    lint -- "no, up to 3 attempts" --> write
+    lint -- "no, up to 5 attempts" --> write
     lint -- "still no" --> fail["Issue: needs-attention"]
     lint -- "yes" --> publish["LinkedIn Posts API"]
     publish --> record["Commit history.json, posts/ archive, topics.yaml"]
@@ -237,14 +237,14 @@ and variable.
 | Label | When |
 |---|---|
 | `posted` | Every published post: text, LinkedIn link, type, tone, format, editor scores, sources |
-| `needs-attention` | Quality checks failed 3 times (with the best draft and reasons), the model API or LinkedIn failed, or the topic backlog couldn't be refilled. Nothing was posted. |
+| `needs-attention` | Quality checks failed 5 times (with the best draft and reasons), the model API or LinkedIn failed, or the topic backlog couldn't be refilled. Nothing was posted. |
 | `token-expiry` | The LinkedIn token expires within 7 days |
 | `scheduled` | A draft waiting out the review window (only if `review_window_hours` > 0) |
 
 ## Costs
 
-- **Model:** $0 on the Gemini or Groq free tier. A posting day makes roughly 5 to 10 model calls
-  (research or news scan and check, then writer and editor, up to 3 rounds), well inside free
+- **Model:** $0 on the Gemini or Groq free tier. A posting day makes roughly 5 to 14 model calls
+  (research or news scan and check, then writer and editor, up to 5 rounds), well inside free
   limits. Every run logs its token use in the final `run.summary` line. With Claude instead
   (directly or on Bedrock), expect very roughly $1-3 a month at Sonnet prices, about $0.15-0.35
   per post. On a new AWS account the free credits cover that for months.
@@ -316,6 +316,9 @@ brief in `CLAUDE.md` where noted.
   server-side web search. Web search isn't free on current Gemini or Groq models, so research now
   comes from RSS feeds and Hacker News search, and the agent fetches the articles itself. This
   also makes sourcing stricter: the model can only cite articles the agent actually fetched.
+- **Up to 5 attempts (change from the brief, agreed October 2026).** The brief allows 3
+  write, edit and lint rounds. With the open models on Bedrock, posts often came within one round of
+  passing, so `max_attempts` is 5. A post that still fails isn't published.
 - **Editor rewrites are never posted (change from the brief, agreed October 2026).** The brief
   has the editor return a rewritten version. In practice nothing checked that rewrite after it
   was written, and editors slipped invented stories and wrong facts into it. The editor still
