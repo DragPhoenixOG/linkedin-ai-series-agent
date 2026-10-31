@@ -93,15 +93,26 @@ def build_feedback(attempt: Attempt) -> str:
     return "\n".join(f"- {item}" for item in items)
 
 
+# Sentence-fix rounds allowed on top of `max_attempts` full drafts, so a post that is one
+# sentence away from passing always gets its repair, even after the last full draft.
+MAX_FIX_ROUNDS = 2
+
+
 def generate_post(llm: LLM, config: Config, brief: PostBrief) -> GenerationResult:
-    """Run up to `max_attempts` rounds and stop at the first one that passes."""
+    """Up to `max_attempts` full drafts (plus sentence-fix rounds); stop at the first pass."""
     limits = LintLimits.from_config(config)
     result = GenerationResult()
     feedback: str | None = None
     previous: str | None = None
     fixed: str | None = None
-    for number in range(1, config.max_attempts + 1):
-        text = fixed or write_draft(llm, config, brief, feedback=feedback, previous=previous)
+    drafts = fixes = 0
+    while True:
+        if fixed:
+            text, fixes = fixed, fixes + 1
+        else:
+            text = write_draft(llm, config, brief, feedback=feedback, previous=previous)
+            drafts += 1
+        number = len(result.attempts) + 1
         lint = lint_post(text, limits, brief.recent_posts)
         review = edit_draft(llm, config, brief, text, checks=lint)
         problems = score_problems(review, brief, config)
@@ -112,6 +123,7 @@ def generate_post(llm: LLM, config: Config, brief: PostBrief) -> GenerationResul
             logger,
             "generate.attempt",
             attempt=number,
+            kind="fix" if fixed else "draft",
             human_score=review.human_score,
             humour_score=review.humour_score,
             lint_issues=len(lint.issues),
@@ -123,10 +135,12 @@ def generate_post(llm: LLM, config: Config, brief: PostBrief) -> GenerationResul
         feedback = build_feedback(attempt)
         previous = text
         fixed = None
-        if number < config.max_attempts and only_sentence_problems(attempt, brief, config):
+        if fixes < MAX_FIX_ROUNDS and only_sentence_problems(attempt, brief, config):
             # Scores already pass: change just the flagged sentences rather than redraft, so the
             # rest of a nearly-there post can't pick up new problems.
             fixed = fix_sentences(llm, config, brief, text, sentence_problems(attempt))
+        if not fixed and drafts >= config.max_attempts:
+            break
     return result
 
 

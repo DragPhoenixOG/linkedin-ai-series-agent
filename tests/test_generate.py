@@ -210,3 +210,35 @@ def test_low_scores_still_get_a_full_revision() -> None:
     result = generate_post(llm, Config(), brief())
     assert result.success
     assert "writer.fix" not in [c["label"] for c in llm.calls]
+
+
+def test_a_near_miss_on_the_last_draft_still_gets_its_fix() -> None:
+    bad_sentence = next(line for line in BAD_POST.splitlines() if "robust" in line)
+    good_sentence = bad_sentence.replace("robust engineering", "boring engineering")
+    llm = FakeLLM(
+        {
+            "writer": f"<post>{BAD_POST}</post>",
+            # Low scores on the first four drafts, then a pass on everything but one sentence.
+            "editor": seq(*[review(6, "")] * 4, review(9, "")),
+            "writer.fix": {"edits": [{"find": bad_sentence, "replace": good_sentence}]},
+        }
+    )
+    result = generate_post(llm, Config(), brief())
+    assert result.success
+    assert len(result.attempts) == 6  # 5 drafts + 1 fix round
+    assert result.best.text == CLEAN_POST
+
+
+def test_fix_rounds_are_capped() -> None:
+    llm = FakeLLM(
+        {
+            "writer": f"<post>{BAD_POST}</post>",
+            "editor": review(9, ""),
+            # The "fix" keeps the banned word, so it never passes.
+            "writer.fix": lambda req: {"edits": [{"find": "robust", "replace": "robust"}]},
+        }
+    )
+    result = generate_post(llm, Config(), brief())
+    assert not result.success
+    assert [c["label"] for c in llm.calls].count("writer.fix") == 2
+    assert len(result.attempts) == 5 + 2  # 5 full drafts, 2 fix rounds, then it stops
