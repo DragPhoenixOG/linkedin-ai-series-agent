@@ -6,16 +6,14 @@ post_interval_days: 3
 post_time_utc: "03:30"            # the workflow cron runs daily at this time (9:00 AM IST)
 
 # --- Language model ---------------------------------------------------------
-# Which provider writes and edits the posts. gemini and groq have free tiers; the others are paid.
-#   gemini:    key in GEMINI_API_KEY (free at aistudio.google.com)
-#   groq:      key in GROQ_API_KEY (free at console.groq.com)
-#   anthropic: key in ANTHROPIC_API_KEY (prepaid credit at platform.claude.com)
-#   bedrock:   Claude on Amazon Bedrock, key in AWS_BEARER_TOKEN_BEDROCK (a Bedrock API key;
-#              new AWS accounts get free credits that cover it)
-# Switching provider means changing llm_provider and the three model names below.
-# Run `python -m agent.main --check` to confirm the models exist for your key.
-# The newest Gemini Flash is often "overloaded" on the free tier, so the default is the one
-# before it. A model that is missing or keeps failing switches to fallback_model.
+# Which provider writes and edits the posts (README, "Model provider", has the full list):
+#   bedrock-openai: open models on Amazon Bedrock through its OpenAI-compatible endpoint, key in
+#                   AWS_BEARER_TOKEN_BEDROCK (set llm_base_url and llm_api_key_env as below)
+#   anthropic:      Claude direct, key in ANTHROPIC_API_KEY (prepaid credit at platform.claude.com)
+#   bedrock:        Claude on Amazon Bedrock, key in AWS_BEARER_TOKEN_BEDROCK
+#   gemini / groq:  free tiers, keys in GEMINI_API_KEY / GROQ_API_KEY
+# Run the workflow with "check" to list the models your key can use. Use a different model as
+# editor than as writer. A model that is missing or keeps failing switches to fallback_model.
 llm_provider: bedrock-openai
 writer_model: deepseek.v3.2
 editor_model: mistral.mistral-large-3-675b-instruct  # the most accurate reviewer so far
