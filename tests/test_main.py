@@ -23,7 +23,9 @@ from fakes import FakeClient, FakeLLM, FakeSources, article
 from test_news import HEADLINES, RULES_OFFICIAL, cand, verified
 
 REPO = Path(__file__).resolve().parents[1]
-TEST_LLM = {
+# Settings the tests rely on, whatever the repo's own config.yaml says.
+TEST_SETTINGS = {
+    "review_window_hours": 0,
     "llm_provider": "gemini",
     "writer_model": "gemini-3.6-flash",
     "editor_model": "gemini-3.6-flash",
@@ -45,9 +47,8 @@ AGENT_RUNTIME = article(
 
 @pytest.fixture
 def root(tmp_path: Path) -> Path:
-    # The repo's own provider and model choice can change at any time; tests pin their own.
     config = yaml.safe_load((REPO / "config.yaml").read_text(encoding="utf-8"))
-    config.update(TEST_LLM)
+    config.update(TEST_SETTINGS)
     (tmp_path / "config.yaml").write_text(yaml.safe_dump(config, sort_keys=False), "utf-8")
     for folder in ("content", "state", "posts"):
         shutil.copytree(REPO / folder, tmp_path / folder)
