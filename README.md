@@ -156,9 +156,20 @@ This is the only step that needs Python on your machine (3.12 or newer), because
 browser and listens on `localhost`.
 
 ```bash
-python -m venv .venv && .venv/bin/pip install -e .      # Windows: py -3.12 -m venv .venv; .venv\Scripts\python -m pip install -e .
-.venv/bin/python scripts/linkedin_auth.py               # Windows: .venv\Scripts\python scripts\linkedin_auth.py
+python -m venv .venv && .venv/bin/pip install -e .
+.venv/bin/python scripts/linkedin_auth.py
 ```
+
+On Windows, in PowerShell from the repository folder (the leading `.\` matters):
+
+```powershell
+py -3.12 -m venv .venv
+.\.venv\Scripts\python -m pip install -e .
+.\.venv\Scripts\python scripts\linkedin_auth.py
+```
+
+If Windows Firewall asks whether Python may listen on the network, allow it on private networks;
+the script needs port 8000 on your own machine for LinkedIn's redirect.
 
 It asks for the Client ID and Secret (or reads `LINKEDIN_CLIENT_ID` / `LINKEDIN_CLIENT_SECRET`
 from `.env`), opens LinkedIn's consent page, and prints your access token, person URN and the
@@ -335,7 +346,8 @@ brief in `CLAUDE.md` where noted.
 
 ## Go-live checklist
 
-- [ ] Model API key created (Gemini by default) and saved as the `GEMINI_API_KEY` secret.
+- [ ] Model API key for `llm_provider` saved as its secret (Gemini: `GEMINI_API_KEY`; Bedrock:
+      `AWS_BEARER_TOKEN_BEDROCK`). If the key has an expiry date, put a reminder before it.
 - [ ] **Run workflow** with **check** ticked: the log ends with `All good.` If a model shows
       `NOT FOUND`, use one from the listed available models in `config.yaml` (on Claude
       providers a `PROBLEM` line carries the API's own reason).
