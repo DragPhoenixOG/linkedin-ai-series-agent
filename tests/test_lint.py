@@ -371,6 +371,7 @@ def test_two_question_endings_in_a_row_fail(clean_post: str) -> None:
         "It's not about making AI act smart. It's about making its work safe to trust.",
         "It\u2019s not about making AI act smart. It\u2019s about making its work safe.",
         "That's not a bug. That's a feature.",
+        "The real skill is no longer the prompt\u2014it's building the lock.",
     ],
 )
 def test_contrast_setup_split_by_a_full_stop_fails(clean_post: str, line: str) -> None:

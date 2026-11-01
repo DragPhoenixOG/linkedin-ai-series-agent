@@ -243,7 +243,8 @@ _NOT_X_ITS_Y_RE = [
     ),
     # "This isn't X. It's Y." / "AI isn't magic, it's plumbing." / "Agents aren't X. They're Y."
     re.compile(
-        rf"\b\w+\s+(?:isn't|is not|wasn't|was not|aren't|are not)\s+{_HEDGE}[^.!?\n]{{1,80}}?"
+        rf"\b\w+\s+(?:isn't|is not|wasn't|was not|aren't|are not|is no longer|are no longer)"
+        rf"\s+{_HEDGE}[^.!?\n]{{1,80}}?"
         r"[.,;:—–]\s*(?:it's|it is|it was|this is|that's|they're|they are)\b",
         re.IGNORECASE,
     ),

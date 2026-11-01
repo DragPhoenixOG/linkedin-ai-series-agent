@@ -189,30 +189,37 @@ def describe_personal_claims(draft: str) -> str:
     )
 
 
-_NUMBER = re.compile(
-    r"\d|\b(?:dozens?|hundreds?|thousands?|millions?|billions?|trillions?)\b", re.IGNORECASE
-)
+_NUMBER = re.compile(r"\d[\d,]*(?:\.\d+)?")
 
 
-def numbers_to_check(text: str) -> list[str]:
-    """Sentences with a number in them (hashtags and links aside)."""
+def _numbers(text: str) -> set[str]:
+    return {n.replace(",", "").rstrip(".") for n in _NUMBER.findall(text)}
+
+
+def numbers_to_check(text: str, known: str = "") -> list[str]:
+    """Sentences with a figure in digits that isn't in `known` (the research and author facts).
+
+    Vague words like "thousands" aren't figures, and hashtags and links are skipped.
+    """
+    known_numbers = _numbers(known)
     found = []
     for sentence in sentences(text):
         bare = re.sub(r"https?://\S+|#\w+", "", sentence)
-        if _NUMBER.search(bare):
+        if _numbers(bare) - known_numbers:
             found.append(sentence)
     return found
 
 
-def describe_numbers(draft: str) -> str:
-    found = numbers_to_check(draft)
+def describe_numbers(draft: str, known: str = "") -> str:
+    found = numbers_to_check(draft, known)
     if not found:
         return "None found."
     lines = "\n".join(f'- "{s}"' for s in found)
     return (
-        "Every number in these sentences must come from the research or the author facts. A "
-        'number in a made-up scenario ("Picture...", "Say...") counts too: list any that '
-        "isn't backed up in fact_problems.\n" + lines
+        "These sentences have figures that aren't in the research or the author facts. A figure "
+        "presented as real (a statistic, or a number about a company, the industry or the "
+        "author) is a fact problem. A small detail inside a scenario clearly opened as made up "
+        '("Picture...", "Say...") is fine.\n' + lines
     )
 
 
@@ -242,7 +249,7 @@ def edit_draft(
         today=brief.today.isoformat(),
         checks=describe_checks(checks),
         personal_claims=describe_personal_claims(draft),
-        numbers=describe_numbers(draft),
+        numbers=describe_numbers(draft, f"{brief.research_notes}\n{brief.voice.author_facts}"),
         research_dates=describe_dates(brief.research_notes, brief.today),
         humour_instruction=fragment("editor_humour" if humorous else "editor_straight"),
         min_words=config.min_words,

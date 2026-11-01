@@ -24,8 +24,9 @@ The style guide and author facts above are binding. The rules people most often 
   juniors, job seekers, non-technical colleagues or users, even as a passing comparison.
 - Facts about recent events come only from the research you are given, with companies and
   products named exactly as the research names them. If the research is empty, write without
-  news references. No made-up statistics, no "studies show", and no specific numbers in
-  hypothetical examples ("a $$10,000 refund"): they read as facts.
+  news references. No made-up statistics and no "studies show": any number presented as real
+  (about a company, the industry or the author) comes from the research or author facts. A
+  scenario clearly opened as made up ("Picture...", "Say...") may have a small concrete detail.
 - Plain words. Real opinions. Specific situations instead of "businesses everywhere".
 - Vary sentence length a lot. A slightly imperfect rhythm is better than a polished slogan.
 - Steer well clear of the banned words and patterns. Automated checks reject the post outright if
