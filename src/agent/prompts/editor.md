@@ -35,6 +35,16 @@ yourself; the writer gets the code's results directly.
 
 $personal_claims
 
+## Numbers to check
+
+$numbers
+
+## Dates in the research, counted from today
+
+Weeks start on Monday. A post that says "last week" for something from earlier this week (or the
+other way round) has a fact problem.
+$research_dates
+
 ## What to do
 
 1. human_score: score the draft 1-10 on "sounds like a real person wrote it".

@@ -557,8 +557,11 @@ original brief in `CLAUDE.md`, that's noted and was agreed.
   series' values the prompts read as before, except that "he" and "his" became the author's name
   or "the author".
 - **The editor sees code's results.** Lint runs before the editor, and the editor gets the exact
-  word count and issues, today's date, and the list of first-person experience sentences to
-  check. The editor's notes that only say something is fine ("no factual problems found") are
+  word count and issues, today's date, the list of first-person experience sentences to check,
+  every sentence with a number in it (each number must come from the research or the author
+  facts, made-up scenarios included), and each research date counted from today in plain words
+  ("4 days ago, earlier this week"). The writer gets the same date words, so posts don't say
+  "last week" for something from Wednesday. The editor's notes that only say something is fine ("no factual problems found") are
   dropped so they can't fail a post.
 - **JSON replies.** On OpenAI-compatible endpoints the agent asks for JSON mode
   (`response_format: json_object`), falling back to plain requests if an endpoint rejects it; the

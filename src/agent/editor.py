@@ -18,7 +18,7 @@ from agent.lint import LintResult, sentences
 from agent.llm import LLM, LLMAuthError, LLMError
 from agent.logs import log_event
 from agent.templates import fragment, render, setting
-from agent.writer import PostBrief, format_recent_posts, tidy_post
+from agent.writer import PostBrief, describe_dates, format_recent_posts, tidy_post
 
 logger = logging.getLogger(__name__)
 
@@ -189,6 +189,33 @@ def describe_personal_claims(draft: str) -> str:
     )
 
 
+_NUMBER = re.compile(
+    r"\d|\b(?:dozens?|hundreds?|thousands?|millions?|billions?|trillions?)\b", re.IGNORECASE
+)
+
+
+def numbers_to_check(text: str) -> list[str]:
+    """Sentences with a number in them (hashtags and links aside)."""
+    found = []
+    for sentence in sentences(text):
+        bare = re.sub(r"https?://\S+|#\w+", "", sentence)
+        if _NUMBER.search(bare):
+            found.append(sentence)
+    return found
+
+
+def describe_numbers(draft: str) -> str:
+    found = numbers_to_check(draft)
+    if not found:
+        return "None found."
+    lines = "\n".join(f'- "{s}"' for s in found)
+    return (
+        "Every number in these sentences must come from the research or the author facts. A "
+        'number in a made-up scenario ("Picture...", "Say...") counts too: list any that '
+        "isn't backed up in fact_problems.\n" + lines
+    )
+
+
 def describe_checks(checks: LintResult | None) -> str:
     """What the deterministic lint found, so the editor doesn't count words or dashes itself."""
     if checks is None:
@@ -215,6 +242,8 @@ def edit_draft(
         today=brief.today.isoformat(),
         checks=describe_checks(checks),
         personal_claims=describe_personal_claims(draft),
+        numbers=describe_numbers(draft),
+        research_dates=describe_dates(brief.research_notes, brief.today),
         humour_instruction=fragment("editor_humour" if humorous else "editor_straight"),
         min_words=config.min_words,
         max_words=config.max_words,

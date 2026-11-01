@@ -8,10 +8,25 @@ from pathlib import Path
 import pytest
 
 from agent.config import Config
-from agent.editor import edit_draft, is_real_problem, parse_review, personal_claims
+from agent.editor import (
+    edit_draft,
+    is_real_problem,
+    numbers_to_check,
+    parse_review,
+    personal_claims,
+)
 from agent.llm import LLMError
 from agent.state import NewsStory, Source
-from agent.writer import PostBrief, Voice, extract_post, load_voice, tidy_post, write_draft
+from agent.writer import (
+    PostBrief,
+    Voice,
+    describe_dates,
+    extract_post,
+    load_voice,
+    relative_date,
+    tidy_post,
+    write_draft,
+)
 from fakes import FakeLLM
 
 REPO = Path(__file__).resolve().parents[1]
@@ -328,3 +343,50 @@ def test_editor_is_asked_to_check_each_personal_claim() -> None:
     assert '- "I made an order yesterday."' in prompt and "author facts" in prompt
     edit_draft(llm, Config(), brief(), "Trust is the hard part.")
     assert "## Personal claims to check\n\nNone found." in llm.calls[1]["prompt"]
+
+
+@pytest.mark.parametrize(
+    ("day", "words"),
+    [
+        ("2026-11-01", "today"),
+        ("2026-10-31", "yesterday"),
+        ("2026-10-28", "4 days ago, earlier this week"),  # Wednesday; today is Sunday 1 Nov
+        ("2026-10-26", "6 days ago, earlier this week"),  # Monday of the same week
+        ("2026-10-25", "7 days ago, last week"),  # Sunday before
+        ("2026-10-19", "13 days ago, last week"),
+        ("2026-10-18", "14 days ago, about 2 weeks ago"),
+        ("2026-09-29", "33 days ago, about a month ago"),
+        ("2026-08-15", "78 days ago, about 3 months ago"),
+    ],
+)
+def test_relative_dates_count_calendar_weeks_from_monday(day: str, words: str) -> None:
+    assert relative_date(date.fromisoformat(day), date(2026, 11, 1)) == words
+
+
+def test_dates_in_the_research_reach_writer_and_editor() -> None:
+    notes = "1. (2026-10-28) AWS released a blueprint.\nVerified story (2026-10-28): x (2026-12-01)"
+    assert describe_dates(notes, date(2026, 11, 1)) == "- 2026-10-28: 4 days ago, earlier this week"
+    assert describe_dates("No research.", date(2026, 11, 1)) == "- No dates in the research."
+    llm = FakeLLM({"writer": "<post>x</post>", "editor": {"human_score": 9, "rewrite": "x"}})
+    b = brief(today=date(2026, 11, 1), research_notes=notes)
+    write_draft(llm, Config(), b)
+    edit_draft(llm, Config(), b, "x")
+    for call in llm.calls:
+        assert "- 2026-10-28: 4 days ago, earlier this week" in call["prompt"]
+
+
+def test_sentences_with_numbers_are_listed_for_the_editor() -> None:
+    post = (
+        "Picture a team whose agent handles a thousand returns overnight. The log shows 17,000 "
+        "entries. Nothing else here has one.\n\nhttps://example.com/2026/10/x\n\n#AI #Web3"
+    )
+    assert numbers_to_check(post) == [
+        "Picture a team whose agent handles a thousand returns overnight.",
+        "The log shows 17,000 entries.",
+    ]
+    llm = FakeLLM({"editor": {"human_score": 9, "rewrite": "x"}})
+    edit_draft(llm, Config(), brief(), post)
+    prompt = llm.calls[0]["prompt"]
+    assert "## Numbers to check" in prompt and '- "The log shows 17,000 entries."' in prompt
+    edit_draft(llm, Config(), brief(), "No numbers at all here.")
+    assert "## Numbers to check\n\nNone found." in llm.calls[1]["prompt"]
