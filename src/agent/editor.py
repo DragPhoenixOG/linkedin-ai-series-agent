@@ -17,7 +17,7 @@ from agent.config import Config
 from agent.lint import LintResult, sentences
 from agent.llm import LLM, LLMAuthError, LLMError
 from agent.logs import log_event
-from agent.templates import fragment, render
+from agent.templates import fragment, render, setting
 from agent.writer import PostBrief, format_recent_posts, tidy_post
 
 logger = logging.getLogger(__name__)
@@ -183,9 +183,9 @@ def describe_personal_claims(draft: str) -> str:
         return "None found."
     lines = "\n".join(f'- "{s}"' for s in found)
     return (
-        'These sentences say Ashish (or "we") did, saw or made something. Check each one '
-        "against the author facts. Any that the author facts don't back up go in fact_problems "
-        "as made-up personal stories.\n" + lines
+        f'These sentences say {setting("author_first_name")} (or "we") did, saw or made '
+        "something. Check each one against the author facts. Any that the author facts don't "
+        "back up go in fact_problems as made-up personal stories.\n" + lines
     )
 
 

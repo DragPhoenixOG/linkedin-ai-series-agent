@@ -2,7 +2,14 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
+
+from agent import templates
+from agent.series import load_series
+
+REPO = Path(__file__).resolve().parents[1]
 
 # A post that passes every lint rule on its own. Tests append or swap lines to trip one rule.
 CLEAN_POST = """Last month a returns flow broke because two systems disagreed on what "cancelled" meant.
@@ -23,3 +30,9 @@ The model gets the headlines. The plumbing decides whether anyone trusts it enou
 @pytest.fixture
 def clean_post() -> str:
     return CLEAN_POST
+
+
+@pytest.fixture(autouse=True)
+def series_settings() -> None:
+    """Every test renders prompts with the repo's own content/series.yaml, as a real run does."""
+    templates.use_series(load_series(REPO / "content"))

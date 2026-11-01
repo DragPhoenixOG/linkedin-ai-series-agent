@@ -224,3 +224,25 @@ def test_real_feed_config_loads() -> None:
     assert any(f.official for f in settings.feeds)
     assert "openai.com" in settings.official_domains
     assert settings.news_queries and settings.hn_min_points_news == 100
+    assert settings.generic_words == {"ai", "artificial", "intelligence", "tech", "technology"}
+
+
+def test_generic_words_come_from_the_feed_config(tmp_path: Path) -> None:
+    path = tmp_path / "feeds.yaml"
+    path.write_text("feeds: []\ngeneric_words: [Farming, crop]\n", encoding="utf-8")
+    settings = load_source_settings(path)
+    assert settings.generic_words == {"farming", "crop"}
+    item = article("Crop prices and farming news", "https://x.example", "2026-10-27")
+    phrases = ["Crop rotation for farming"]
+    assert relevance(item, phrases, settings.generic_words) == 0  # only generic words match
+    assert relevance(item, phrases) == 2  # with the default AI list they would count
+    path.write_text("feeds: []\ngeneric_words: Farming\n", encoding="utf-8")
+    assert load_source_settings(path).generic_words == {"farming"}
+    path.write_text("feeds: []\n", encoding="utf-8")
+    assert load_source_settings(path).generic_words == {
+        "ai",
+        "artificial",
+        "intelligence",
+        "tech",
+        "technology",
+    }

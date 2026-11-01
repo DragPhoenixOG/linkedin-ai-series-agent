@@ -5,7 +5,7 @@
 2. Scan: the model groups headlines into 5-10 candidate stories, citing headline ids.
 3. Filter: drop unconfirmed stories, ones without enough sourcing (2 sites, or 1 official), and
    any story already covered (ever).
-4. Score: relevance, how strong an angle Ashish has, freshness, significance, and a penalty for
+4. Score: relevance, how strong an angle the author has, freshness, significance, and a penalty for
    overlapping with the last 10 posts.
 5. Verify: the cited articles are fetched and the model checks each key fact against their text.
    The first candidate that holds up wins. If none does, the caller falls back to a skill post.
@@ -51,7 +51,7 @@ class NewsCandidate:
     articles: list[Article] = field(default_factory=list)
     significance: str = "normal"  # "major" | "normal"
     relevance: int = 3  # 1-5: fit with the series theme
-    angle_strength: int = 3  # 1-5: how much Ashish has a real take on it
+    angle_strength: int = 3  # 1-5: how much the author has a real take on it
     angle: str = ""
     confirmed: bool = True
     key_facts: list[str] = field(default_factory=list)
