@@ -1,4 +1,4 @@
-Edit this LinkedIn draft by Ashish.
+Edit this LinkedIn draft by Ashish. Today is $today.
 
 Post type: $post_type
 Tone: $tone
@@ -31,6 +31,10 @@ Code checks length, em dashes, hashtags, emoji, links, banned words and the bann
 (contrast setups, lists of three, repeated sentence starts). Don't count or report those
 yourself; the writer gets the code's results directly.
 
+## Personal claims to check
+
+$personal_claims
+
 ## What to do
 
 1. human_score: score the draft 1-10 on "sounds like a real person wrote it".
@@ -47,6 +51,11 @@ yourself; the writer gets the code's results directly.
    story. So does what he has seen, watched or tested ("I've watched teams...", "most teams I
    see", "I spent last month..."). First-person opinions ("I think...") are fine. Hypothetical
    examples with specific numbers ("a $$10,000 refund", "2% of SKUs") read as facts: list them.
+   Not fact problems, so never list these: opinions and predictions ("I think...", "the hard
+   part is..."), general truths about software or business ("a wrong order costs money"), the
+   post's own topic or argument, and scenarios opened as made up ("Picture...", "Say...",
+   "Imagine...") as long as they carry no specific numbers. Weak or generic lines like these
+   belong in ai_sounding, not here.
    rule_problems: only the rules code can't check: the humour hard limits (even in a straight
    post, for example a joke at the expense of interns or junior people), anything implying the
    series is ending or numbering posts, and naming clients or brands from his work. The format

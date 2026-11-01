@@ -8,7 +8,7 @@ from pathlib import Path
 import pytest
 
 from agent.config import Config
-from agent.editor import edit_draft, is_real_problem, parse_review
+from agent.editor import edit_draft, is_real_problem, parse_review, personal_claims
 from agent.llm import LLMError
 from agent.state import NewsStory, Source
 from agent.writer import PostBrief, Voice, extract_post, load_voice, tidy_post, write_draft
@@ -284,3 +284,47 @@ def test_an_unreadable_review_fails_the_attempt_instead_of_the_run() -> None:
     review = edit_draft(llm, Config(), brief(), "Draft text")
     assert review.human_score == 0 and not review.is_complete(humorous=False)
     assert [c["label"] for c in llm.calls] == ["editor", "editor.retry"]
+
+
+def test_editor_knows_today_and_what_is_not_a_fact_problem() -> None:
+    llm = FakeLLM({"editor": {"human_score": 9, "rewrite": "x"}})
+    edit_draft(llm, Config(), brief(), "x")
+    prompt = llm.calls[0]["prompt"]
+    assert "Today is 2026-10-28." in prompt
+    assert "Not fact problems, so never list these" in prompt and '"Picture..."' in prompt
+
+
+@pytest.mark.parametrize(
+    "sentence",
+    [
+        "I made an order yesterday.",
+        "We've spent the last year convincing ourselves the API call is easy.",
+        "I've watched teams scramble.",
+        "My team shipped a marketplace integration on schedule.",
+    ],
+)
+def test_first_person_experience_is_picked_out(sentence: str) -> None:
+    assert personal_claims(f"An opener here. {sentence} Something else.") == [sentence]
+
+
+@pytest.mark.parametrize(
+    "sentence",
+    [
+        "I think that is backwards.",
+        "I find that oddly comforting.",
+        "I'm skeptical.",
+        "It crosses into the integrations I work on.",
+        "I'll be watching the incident reports.",
+    ],
+)
+def test_opinions_are_not_personal_claims(sentence: str) -> None:
+    assert personal_claims(sentence) == []
+
+
+def test_editor_is_asked_to_check_each_personal_claim() -> None:
+    llm = FakeLLM({"editor": {"human_score": 9, "rewrite": "x"}})
+    edit_draft(llm, Config(), brief(), "I made an order yesterday. It had a coupon.")
+    prompt = llm.calls[0]["prompt"]
+    assert '- "I made an order yesterday."' in prompt and "author facts" in prompt
+    edit_draft(llm, Config(), brief(), "Trust is the hard part.")
+    assert "## Personal claims to check\n\nNone found." in llm.calls[1]["prompt"]

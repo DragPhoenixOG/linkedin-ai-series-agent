@@ -145,7 +145,14 @@ def generate_post(llm: LLM, config: Config, brief: PostBrief) -> GenerationResul
 
 
 # Lint rules whose problems sit in one sentence and can be fixed there.
-LOCAL_RULES = {"banned_phrase", "em_dash", "not_x_its_y", "repeated_sentence_start", "triad"}
+LOCAL_RULES = {
+    "banned_phrase",
+    "em_dash",
+    "length",  # a few words short or long: fixed by extending or trimming one sentence
+    "not_x_its_y",
+    "repeated_sentence_start",
+    "triad",
+}
 
 
 def only_sentence_problems(attempt: Attempt, brief: PostBrief, config: Config) -> bool:
