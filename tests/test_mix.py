@@ -114,6 +114,8 @@ def test_override_warnings() -> None:
 
 def test_mini_story_asks_for_an_explicitly_hypothetical_opening() -> None:
     from agent.mix import FORMATS
+    from agent.templates import fill
 
-    story = FORMATS["story"]
-    assert "Picture a retailer" in story.description and '"we"' in story.description
+    story = fill(FORMATS["story"].description)
+    assert '"Picture...", "Say...", for example "Say a retailer\'s returns agent' in story
+    assert '"we"' in story

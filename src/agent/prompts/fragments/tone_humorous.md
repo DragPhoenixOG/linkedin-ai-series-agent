@@ -1,6 +1,6 @@
 This one should be noticeably funny: dry, deadpan, observational, self-aware. The kind of line
-engineers say in standup. Aim the sarcasm at hype, buzzwords and common industry habits
-(including consultants and engineers like Ashish himself), never at people.
+$author_peers say to each other at work. Aim the sarcasm at hype, buzzwords and common
+industry habits (including $author_peers like $author_first_name), never at people.
 
 One or two genuinely good lines beat five jokes. Understated beats loud. Underneath the humour
 there must be a real, useful point about the skill or the news.

@@ -24,6 +24,10 @@ feeds:
   # Retail and commerce tech
   - {name: Retail Dive, url: "https://www.retaildive.com/feeds/news/"}
 
+# Words in almost every headline on this subject. They're ignored when judging whether an
+# article matches a topic, so "AI" alone doesn't make an article relevant to "AI agents".
+generic_words: [ai, artificial, intelligence, tech, technology]
+
 # Links on these domains count as official even when found through Hacker News.
 official_domains:
   - openai.com

@@ -1,11 +1,10 @@
 Today is $today. The topic backlog is running low. Propose $count new skill topics.
 
-Stay inside the theme: agentic AI, AI engineering, enterprise reliability, AI careers,
-integration and commerce tech meeting AI, and notable new developments in AI tooling.
+Stay inside the theme: $series_topic_areas.
 
 Mix evergreen skills (still true in two years) with timely ones drawn from the research notes
-below. Each topic must be a skill or practice an engineer or consultant can get better at, not a
-company announcement.
+below. Each topic must be a skill or practice $series_learner can get better at, not a company
+announcement.
 
 Do not repeat or nearly repeat anything already in the backlog or already posted.
 

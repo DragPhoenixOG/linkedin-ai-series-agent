@@ -84,11 +84,14 @@ flowchart TD
 | `lint.py` | Deterministic anti-AI checks (banned phrases, em dashes, "it's not X, it's Y", repeated openings, emoji, hashtags, length) |
 | `linkedin.py` | LinkedIn Posts API client: escaping, retries, 401 handling |
 | `notify.py` | GitHub issues: posted records, alerts, token reminders, review-window drafts |
+| `series.py`, `templates.py` | Load `content/series.yaml` and fill it, with each call's values, into the prompts |
 | `main.py` | Orchestration and the command line |
 
-Prompts live in `src/agent/prompts/` as Markdown, not inline strings. The writing rules live in
-`content/style.md`, the only personal facts the agent may use live in `content/author.md`, and
-the research sources live in `content/feeds.yaml`.
+Prompts live in `src/agent/prompts/` as Markdown, not inline strings. Who the series is by and
+what it's about live in `content/series.yaml`, the writing rules in `content/style.md`, the only
+personal facts the agent may use in `content/author.md`, and the research sources in
+`content/feeds.yaml`. So the same agent can run a series for anyone, on any subject: see
+[Run your own series](#run-your-own-series).
 
 ## Why the posts shouldn't read like AI
 
@@ -348,6 +351,8 @@ fully automatic posting once you trust the posts.
 
 ### Changing things
 
+- **Who and what the series is about.** `content/series.yaml`; see
+  [Run your own series](#run-your-own-series).
 - **Topics.** Append to `content/topics.yaml` with a unique `id`, a `title`, an `angle` and
   `status: pending`. Topics are used in file order. The agent adds its own (marked
   `source: auto`) when fewer than 3 are pending; set `auto_extend_topics: false` to stop that.
@@ -387,6 +392,54 @@ fully automatic posting once you trust the posts.
 | "Commit state" step fails | Workflow permissions | **Read and write permissions** (setup step 5) |
 | Several quality failures in a row | The models are struggling with today's topic or format | Paste the run log into an issue; consider Claude |
 | No emails | Not watching issues, or email notifications off | Setup step 5 |
+
+## Run your own series
+
+Nothing in the code is tied to this series. Everything about who writes it and what it covers
+lives in five files under `content/`, so anyone can run their own series, on any subject
+(farm tech, logistics, e-commerce, order management, ...), from a copy of this repository.
+
+| File | What to put in it |
+|---|---|
+| `series.yaml` | Who writes the series and what it's about: name, a one-line summary of who they are, the theme, what each post should explain, the topic areas, what news counts and what a good take looks like. Each value drops into a sentence in the prompts; the comment above it shows which. |
+| `author.md` | The only personal facts the agent may use: role, experience, work. Anything not here, the posts won't claim. |
+| `topics.yaml` | The first topics, in order. The agent adds more inside the theme when fewer than 3 are left. |
+| `feeds.yaml` | RSS feeds for the subject's news and blogs, the domains that count as official, Hacker News queries, and `generic_words`: words in almost every headline on the subject (for an AI series, "AI" and "tech"), which don't count as a match on their own. |
+| `style.md` | Optional: the voice, banned phrases and humour rules. The defaults suit most professional posts. |
+
+Then follow [Setup](#setup) with your own model key and LinkedIn token, run **check** (its first
+line names the series it loaded), and preview a few dry runs before going live.
+
+An example `series.yaml` for a different series:
+
+```yaml
+author:
+  name: Priya Sharma
+  first_name: Priya
+  summary: an agronomist who advises smallholder farms on soil health and irrigation
+  kind: agronomist
+  voice: a practical agronomist talking to farmers at the co-op
+  peers: agronomists and farm advisers
+  own_work: soil testing and drip irrigation work
+series:
+  theme: practical farm tech
+  writes_about: farming, soil and water
+  skill_promise: why the practice matters this season and how it protects yields
+  topic_areas: soil health, irrigation, crop planning, farm equipment
+  learner: a farmer or farm adviser
+  example_scenario: Say a farm switches to drip irrigation in March...
+research:
+  focus: a new crop variety, a government scheme, a field trial with results
+  why_it_matters_for: farmers and farm advisers
+news:
+  focus: crop prices, monsoon forecasts, irrigation schemes, agri policy
+  major: a major policy change or a failed monsoon
+  take: what it means for small farms and whether the claims hold up
+```
+
+Every field is required. A missing, empty or misspelled field stops the run with a message
+naming it. The tests check that a different `series.yaml` reaches every prompt and that nothing
+from this series leaks into it.
 
 ## Issues it opens
 
@@ -442,6 +495,7 @@ fully automatic posting once you trust the posts.
 ```
 config.yaml                 interval, model provider and names, word limits, mix ratios, flags
 content/
+  series.yaml               who writes the series and what it's about (fills every prompt)
   topics.yaml               topic backlog
   feeds.yaml                research sources: RSS feeds, official domains, Hacker News queries
   style.md                  the writing style guide
@@ -498,9 +552,16 @@ original brief in `CLAUDE.md`, that's noted and was agreed.
   contrast setup, em dashes, repeated starts, lists of three, length, an unsupported claim),
   the writer returns find-and-replace edits for just those sentences, code applies them, and the
   result is scored and linted again, up to 2 times. A post that still fails isn't published.
+- **The series is configurable.** Who writes it and what it covers were written into the prompts;
+  they now come from `content/series.yaml`, so the agent can run anyone's series. With this
+  series' values the prompts read as before, except that "he" and "his" became the author's name
+  or "the author".
 - **The editor sees code's results.** Lint runs before the editor, and the editor gets the exact
-  word count and issues, today's date, and the list of first-person experience sentences to
-  check. The editor's notes that only say something is fine ("no factual problems found") are
+  word count and issues, today's date, the list of first-person experience sentences to check,
+  every sentence with a number in it (each number must come from the research or the author
+  facts, made-up scenarios included), and each research date counted from today in plain words
+  ("4 days ago, earlier this week"). The writer gets the same date words, so posts don't say
+  "last week" for something from Wednesday. The editor's notes that only say something is fine ("no factual problems found") are
   dropped so they can't fail a post.
 - **JSON replies.** On OpenAI-compatible endpoints the agent asks for JSON mode
   (`response_format: json_object`), falling back to plain requests if an endpoint rejects it; the

@@ -113,12 +113,13 @@ def gather_articles(
     phrases = [title, *queries]
     # Feed items first: when the same article also turns up on Hacker News, keep the feed copy,
     # which has a summary and the right "official" flag.
-    found = [a for a in sources.feed_items(since, today) if is_relevant(a, phrases)]
+    generic = sources.settings.generic_words
+    found = [a for a in sources.feed_items(since, today) if is_relevant(a, phrases, generic)]
     for query in queries:
         found += sources.search_hn(query, since, sources.settings.hn_min_points_research)
     ranked = sorted(
         dedupe(found),
-        key=lambda a: (relevance(a, phrases), a.official, a.points, a.published),
+        key=lambda a: (relevance(a, phrases, generic), a.official, a.points, a.published),
         reverse=True,
     )
     return ranked[:limit]

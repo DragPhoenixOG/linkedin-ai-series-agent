@@ -12,6 +12,10 @@ Anything specific you say about these companies or products (what they built, ho
 uses it, numbers, examples) must be in the summary or the details above. If it isn't listed,
 leave it out or make it obviously your own hypothetical.
 
+When those dates are, counted from today (weeks start on Monday). If you mention when something
+happened, use these words, not your own arithmetic:
+$research_dates
+
 ## Format: $format_name
 
 $format_description

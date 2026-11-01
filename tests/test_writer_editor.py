@@ -8,10 +8,25 @@ from pathlib import Path
 import pytest
 
 from agent.config import Config
-from agent.editor import edit_draft, is_real_problem, parse_review, personal_claims
+from agent.editor import (
+    edit_draft,
+    is_real_problem,
+    numbers_to_check,
+    parse_review,
+    personal_claims,
+)
 from agent.llm import LLMError
 from agent.state import NewsStory, Source
-from agent.writer import PostBrief, Voice, extract_post, load_voice, tidy_post, write_draft
+from agent.writer import (
+    PostBrief,
+    Voice,
+    describe_dates,
+    extract_post,
+    load_voice,
+    relative_date,
+    tidy_post,
+    write_draft,
+)
 from fakes import FakeLLM
 
 REPO = Path(__file__).resolve().parents[1]
@@ -152,7 +167,8 @@ def test_prompts_spell_out_personal_claims_and_humour_limits() -> None:
     writer_system = llm.calls[0]["system"][1]
     assert "personal claims" in writer_system and "interns" in writer_system
     assert "I've watched teams" in writer_system and "em dashes" in writer_system
-    assert "a $10,000 refund" in writer_system
+    assert "any number presented as real" in writer_system
+    assert "may have a small concrete detail" in writer_system
     assert "Concrete without inventing" in writer_system
     assert "The future isn't A. It's B" in writer_system
     editor_prompt = llm.calls[1]["prompt"]
@@ -328,3 +344,60 @@ def test_editor_is_asked_to_check_each_personal_claim() -> None:
     assert '- "I made an order yesterday."' in prompt and "author facts" in prompt
     edit_draft(llm, Config(), brief(), "Trust is the hard part.")
     assert "## Personal claims to check\n\nNone found." in llm.calls[1]["prompt"]
+
+
+@pytest.mark.parametrize(
+    ("day", "words"),
+    [
+        ("2026-11-01", "today"),
+        ("2026-10-31", "yesterday"),
+        ("2026-10-28", "4 days ago, earlier this week"),  # Wednesday; today is Sunday 1 Nov
+        ("2026-10-26", "6 days ago, earlier this week"),  # Monday of the same week
+        ("2026-10-25", "7 days ago, last week"),  # Sunday before
+        ("2026-10-19", "13 days ago, last week"),
+        ("2026-10-18", "14 days ago, about 2 weeks ago"),
+        ("2026-09-29", "33 days ago, about a month ago"),
+        ("2026-08-15", "78 days ago, about 3 months ago"),
+    ],
+)
+def test_relative_dates_count_calendar_weeks_from_monday(day: str, words: str) -> None:
+    assert relative_date(date.fromisoformat(day), date(2026, 11, 1)) == words
+
+
+def test_dates_in_the_research_reach_writer_and_editor() -> None:
+    notes = "1. (2026-10-28) AWS released a blueprint.\nVerified story (2026-10-28): x (2026-12-01)"
+    assert describe_dates(notes, date(2026, 11, 1)) == "- 2026-10-28: 4 days ago, earlier this week"
+    assert describe_dates("No research.", date(2026, 11, 1)) == "- No dates in the research."
+    llm = FakeLLM({"writer": "<post>x</post>", "editor": {"human_score": 9, "rewrite": "x"}})
+    b = brief(today=date(2026, 11, 1), research_notes=notes)
+    write_draft(llm, Config(), b)
+    edit_draft(llm, Config(), b, "x")
+    for call in llm.calls:
+        assert "- 2026-10-28: 4 days ago, earlier this week" in call["prompt"]
+
+
+def test_sentences_with_numbers_are_listed_for_the_editor() -> None:
+    post = (
+        "Picture a team whose agent handles a thousand returns overnight. The log shows 17,000 "
+        "entries. DoorDash handled nearly 1 billion orders. Nothing else here has one."
+        "\n\nhttps://example.com/2026/10/x\n\n#AI #Web3"
+    )
+    known = "For context, DoorDash handled nearly 1 billion orders in Q3 2026."
+    # "a thousand" is a figure of speech; 1 billion is in the research; 17,000 is not.
+    assert numbers_to_check(post, known) == ["The log shows 17,000 entries."]
+    assert "DoorDash handled nearly 1 billion orders." in numbers_to_check(post)
+    llm = FakeLLM({"editor": {"human_score": 9, "rewrite": "x"}})
+    edit_draft(llm, Config(), brief(), post)
+    prompt = llm.calls[0]["prompt"]
+    assert "## Numbers to check" in prompt and '- "The log shows 17,000 entries."' in prompt
+    assert "clearly opened as made up" in prompt
+    edit_draft(llm, Config(), brief(), "No numbers at all here.")
+    assert "## Numbers to check\n\nNone found." in llm.calls[1]["prompt"]
+
+
+def test_figures_in_the_research_or_author_facts_are_not_listed() -> None:
+    llm = FakeLLM({"editor": {"human_score": 9, "rewrite": "x"}})
+    voice = Voice(style_guide="S", author_facts="About 2 years of experience.")
+    b = brief(voice=voice, research_notes="1. (2026-10-20) Version 3.5 shipped with 120B params.")
+    edit_draft(llm, Config(), b, "Version 3.5 is out. I have 2 years in. It has 120B params.")
+    assert "## Numbers to check\n\nNone found." in llm.calls[0]["prompt"]

@@ -18,6 +18,7 @@ import yaml
 from agent.config import Config
 from agent.llm import AnthropicLLM, LLMError, OpenAICompatLLM
 from agent.main import EXIT_FAILED, EXIT_OK, EXIT_USAGE, Services, parse_args, run
+from agent.series import SeriesError
 from conftest import CLEAN_POST
 from fakes import FakeClient, FakeLLM, FakeSources, article
 from test_news import HEADLINES, RULES_OFFICIAL, cand, verified
@@ -170,6 +171,31 @@ def test_dry_run_skill_post_end_to_end_without_writes(root: Path) -> None:
     assert labels == ["research.queries", "research", "writer", "editor"]  # first post: no news
 
 
+def test_dry_run_uses_the_series_in_content(root: Path) -> None:
+    """Swap in another person's series: every prompt the models see is theirs, not Ashish's."""
+    from test_series import AGRICULTURE
+
+    (root / "content" / "series.yaml").write_text(yaml.safe_dump(AGRICULTURE), encoding="utf-8")
+    llm = FakeLLM(
+        {**research_replies(), "writer": f"<post>{CLEAN_POST}</post>", "editor": editor_reply()}
+    )
+    code, _ = go(root, llm, "--dry-run", "--force")
+    assert code == EXIT_OK
+    sent = "\n".join(
+        part
+        for call in llm.calls
+        for part in [call["prompt"], *call.get("system", [])]
+        if call["label"] in {"writer", "editor", "research", "research.queries"}
+    )
+    # style.md and author.md are the user's own files and are swapped separately; skip them here.
+    for own_file in ("author.md", "style.md"):
+        sent = sent.replace((root / "content" / own_file).read_text(encoding="utf-8").strip(), "")
+    assert "You ghostwrite LinkedIn posts for Priya Sharma" in sent
+    assert "practical farm tech" in sent
+    for phrase in ["Ashish", "Forward Deployed", "future of tech", "chai"]:
+        assert phrase not in sent, phrase
+
+
 def test_dry_run_news_post(root: Path) -> None:
     add_history(root, past_post("2026-10-20"))
     llm = FakeLLM(
@@ -313,7 +339,14 @@ def test_check_reports_models_and_feeds(root: Path) -> None:
     assert "available models: gemini-3.5-flash-lite, gemini-3.6-flash" in output
     assert "Dead Feed: unreachable" in output
     assert "Hacker News search: 1 results" in output
+    assert output.startswith("Series: AI and the future of tech, by Ashish Ranjan\n")
     assert output.strip().endswith("All good.")
+
+
+def test_a_run_needs_the_series_file(root: Path) -> None:
+    (root / "content" / "series.yaml").unlink()
+    with pytest.raises(SeriesError, match=r"series\.yaml is missing"):
+        run_check(root, checker(["gemini-3.6-flash"]), fake_sources())
 
 
 def test_check_counts_tokens_for_claude_models(root: Path) -> None:

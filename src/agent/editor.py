@@ -17,8 +17,8 @@ from agent.config import Config
 from agent.lint import LintResult, sentences
 from agent.llm import LLM, LLMAuthError, LLMError
 from agent.logs import log_event
-from agent.templates import fragment, render
-from agent.writer import PostBrief, format_recent_posts, tidy_post
+from agent.templates import fragment, render, setting
+from agent.writer import PostBrief, describe_dates, format_recent_posts, tidy_post
 
 logger = logging.getLogger(__name__)
 
@@ -183,9 +183,43 @@ def describe_personal_claims(draft: str) -> str:
         return "None found."
     lines = "\n".join(f'- "{s}"' for s in found)
     return (
-        'These sentences say Ashish (or "we") did, saw or made something. Check each one '
-        "against the author facts. Any that the author facts don't back up go in fact_problems "
-        "as made-up personal stories.\n" + lines
+        f'These sentences say {setting("author_first_name")} (or "we") did, saw or made '
+        "something. Check each one against the author facts. Any that the author facts don't "
+        "back up go in fact_problems as made-up personal stories.\n" + lines
+    )
+
+
+_NUMBER = re.compile(r"\d[\d,]*(?:\.\d+)?")
+
+
+def _numbers(text: str) -> set[str]:
+    return {n.replace(",", "").rstrip(".") for n in _NUMBER.findall(text)}
+
+
+def numbers_to_check(text: str, known: str = "") -> list[str]:
+    """Sentences with a figure in digits that isn't in `known` (the research and author facts).
+
+    Vague words like "thousands" aren't figures, and hashtags and links are skipped.
+    """
+    known_numbers = _numbers(known)
+    found = []
+    for sentence in sentences(text):
+        bare = re.sub(r"https?://\S+|#\w+", "", sentence)
+        if _numbers(bare) - known_numbers:
+            found.append(sentence)
+    return found
+
+
+def describe_numbers(draft: str, known: str = "") -> str:
+    found = numbers_to_check(draft, known)
+    if not found:
+        return "None found."
+    lines = "\n".join(f'- "{s}"' for s in found)
+    return (
+        "These sentences have figures that aren't in the research or the author facts. A figure "
+        "presented as real (a statistic, or a number about a company, the industry or the "
+        "author) is a fact problem. A small detail inside a scenario clearly opened as made up "
+        '("Picture...", "Say...") is fine.\n' + lines
     )
 
 
@@ -215,6 +249,8 @@ def edit_draft(
         today=brief.today.isoformat(),
         checks=describe_checks(checks),
         personal_claims=describe_personal_claims(draft),
+        numbers=describe_numbers(draft, f"{brief.research_notes}\n{brief.voice.author_facts}"),
+        research_dates=describe_dates(brief.research_notes, brief.today),
         humour_instruction=fragment("editor_humour" if humorous else "editor_straight"),
         min_words=config.min_words,
         max_words=config.max_words,

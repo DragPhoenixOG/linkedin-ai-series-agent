@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 import re
 from dataclasses import dataclass, field
-from datetime import date
+from datetime import date, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -28,6 +28,39 @@ class Voice:
 
     def system_block(self) -> str:
         return f"# Style guide\n\n{self.style_guide}\n\n# Author facts\n\n{self.author_facts}"
+
+
+_ISO_DATE = re.compile(r"\b(\d{4}-\d{2}-\d{2})\b")
+
+
+def relative_date(day: date, today: date) -> str:
+    """How long before `today` a date was, in the words a post should use."""
+    days = (today - day).days
+    if days == 0:
+        return "today"
+    if days == 1:
+        return "yesterday"
+    if day.isocalendar()[:2] == today.isocalendar()[:2]:
+        return f"{days} days ago, earlier this week"
+    if day.isocalendar()[:2] == (today - timedelta(days=7)).isocalendar()[:2]:
+        return f"{days} days ago, last week"
+    if days < 31:
+        return f"{days} days ago, about {max(2, round(days / 7))} weeks ago"
+    months = round(days / 30)
+    return f"{days} days ago, about {'a month' if months <= 1 else f'{months} months'} ago"
+
+
+def describe_dates(research_notes: str, today: date) -> str:
+    """Each date in the research, relative to today (weeks start on Monday)."""
+    lines = []
+    for text in dict.fromkeys(_ISO_DATE.findall(research_notes)):
+        try:
+            day = date.fromisoformat(text)
+        except ValueError:
+            continue
+        if day <= today:
+            lines.append(f"- {text}: {relative_date(day, today)}")
+    return "\n".join(lines) or "- No dates in the research."
 
 
 def load_voice(content_dir: Path) -> Voice:
@@ -152,6 +185,7 @@ def write_draft(
         today=brief.today.isoformat(),
         subject=subject_block(brief, config),
         research=brief.research_notes,
+        research_dates=describe_dates(brief.research_notes, brief.today),
         format_name=brief.format_name,
         format_description=brief.format_description,
         tone_name=brief.tone,

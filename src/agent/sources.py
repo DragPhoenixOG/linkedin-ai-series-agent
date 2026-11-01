@@ -32,6 +32,10 @@ USER_AGENT = (
 _ATOM = "{http://www.w3.org/2005/Atom}"
 
 
+# The default for `generic_words` in content/feeds.yaml (an AI and tech series).
+DEFAULT_GENERIC_WORDS = frozenset({"ai", "artificial", "intelligence", "tech", "technology"})
+
+
 @dataclass(frozen=True)
 class Feed:
     name: str
@@ -48,6 +52,8 @@ class SourceSettings:
     news_queries: list[str] = field(default_factory=list)
     hn_min_points_news: int = 100
     hn_min_points_research: int = 10
+    # Words in almost every headline on the subject: matching on them says nothing about relevance.
+    generic_words: frozenset[str] = DEFAULT_GENERIC_WORDS
 
 
 @dataclass
@@ -72,6 +78,9 @@ def load_source_settings(path: Path) -> SourceSettings:
     """Read `content/feeds.yaml`."""
     data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
     hn = data.get("hacker_news", {}) or {}
+    generic = data.get("generic_words", DEFAULT_GENERIC_WORDS)
+    if isinstance(generic, str):  # a single word written without list brackets
+        generic = [generic]
     return SourceSettings(
         feeds=[
             Feed(f["name"], f["url"], bool(f.get("official", False))) for f in data.get("feeds", [])
@@ -80,6 +89,7 @@ def load_source_settings(path: Path) -> SourceSettings:
         news_queries=list(hn.get("news_queries", [])),
         hn_min_points_news=int(hn.get("min_points_news", 100)),
         hn_min_points_research=int(hn.get("min_points_research", 10)),
+        generic_words=frozenset(str(w).lower() for w in generic or []),
     )
 
 
@@ -186,27 +196,24 @@ def html_to_text(html: str) -> str:
     return "\n".join(line for line in lines if line)
 
 
-# Words in almost every AI headline: matching on them says nothing about relevance.
-_GENERIC_WORDS = frozenset({"ai", "artificial", "intelligence", "tech", "technology"})
+def _wanted(phrases: list[str], generic: frozenset[str]) -> set[str]:
+    return set().union(*(significant_tokens(p) for p in phrases)) - generic if phrases else set()
 
 
-def _wanted(phrases: list[str]) -> set[str]:
-    return (
-        set().union(*(significant_tokens(p) for p in phrases)) - _GENERIC_WORDS
-        if phrases
-        else set()
-    )
-
-
-def relevance(article: Article, phrases: list[str]) -> int:
+def relevance(
+    article: Article, phrases: list[str], generic: frozenset[str] = DEFAULT_GENERIC_WORDS
+) -> int:
     """How many specific words from `phrases` appear in the article's title and summary."""
-    return len(significant_tokens(f"{article.title} {article.summary}") & _wanted(phrases))
+    text = f"{article.title} {article.summary}"
+    return len(significant_tokens(text) & _wanted(phrases, generic))
 
 
-def is_relevant(article: Article, phrases: list[str]) -> bool:
+def is_relevant(
+    article: Article, phrases: list[str], generic: frozenset[str] = DEFAULT_GENERIC_WORDS
+) -> bool:
     """A specific topic word in the title, or two anywhere in title and summary."""
-    in_title = significant_tokens(article.title) & _wanted(phrases)
-    return bool(in_title) or relevance(article, phrases) >= 2
+    in_title = significant_tokens(article.title) & _wanted(phrases, generic)
+    return bool(in_title) or relevance(article, phrases, generic) >= 2
 
 
 # --- Network ----------------------------------------------------------------------------------

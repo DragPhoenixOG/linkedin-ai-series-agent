@@ -235,15 +235,16 @@ _NUMBERING_RE = [
 
 _HEDGE = r"(?:just\s+|only\s+|merely\s+|simply\s+|about\s+)?"
 _NOT_X_ITS_Y_RE = [
-    # "It's not X, it's Y" / "It's not just X, it's Y"
+    # "It's not X, it's Y" / "It's not just X, it's Y" / "It's not X. It's Y."
     re.compile(
         rf"\b(?:it's|it is|this is|that's|that is)\s+not\s+{_HEDGE}[^.!?\n]{{1,80}}?"
-        r"[,;:—–]\s*(?:it's|it is|this is|that's|that is)\b",
+        r"[.,;:—–]\s*(?:it's|it is|this is|that's|that is)\b",
         re.IGNORECASE,
     ),
     # "This isn't X. It's Y." / "AI isn't magic, it's plumbing." / "Agents aren't X. They're Y."
     re.compile(
-        rf"\b\w+\s+(?:isn't|is not|wasn't|was not|aren't|are not)\s+{_HEDGE}[^.!?\n]{{1,80}}?"
+        rf"\b\w+\s+(?:isn't|is not|wasn't|was not|aren't|are not|is no longer|are no longer)"
+        rf"\s+{_HEDGE}[^.!?\n]{{1,80}}?"
         r"[.,;:—–]\s*(?:it's|it is|it was|this is|that's|they're|they are)\b",
         re.IGNORECASE,
     ),

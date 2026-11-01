@@ -24,7 +24,7 @@ from typing import Any, TextIO
 
 from dotenv import load_dotenv
 
-from agent import mix, news, notify, research, scheduler, topics
+from agent import mix, news, notify, research, scheduler, templates, topics
 from agent.config import Config, load_config
 from agent.generate import GenerationResult, generate_post
 from agent.linkedin import (
@@ -44,6 +44,7 @@ from agent.llm import (
 )
 from agent.logs import log_event, setup_logging
 from agent.notify import Notifier, NotifyError
+from agent.series import load_series
 from agent.sources import SourceClient, load_source_settings
 from agent.state import (
     History,
@@ -189,7 +190,7 @@ def build_brief(plan: Plan, history: History, root: Path, today: date) -> PostBr
         tone=plan.tone,
         format_id=plan.format.id,
         format_name=plan.format.name,
-        format_description=plan.format.description,
+        format_description=templates.fill(plan.format.description),
         today=today,
         voice=load_voice(root / "content"),
         research_notes=plan.research_notes,
@@ -651,6 +652,7 @@ def run(
     root: Path = args.root
     load_dotenv(root / ".env")
     config = load_config(root / "config.yaml")
+    templates.use_series(load_series(root / "content"))
     if args.date:
         today, now = args.date, datetime.combine(args.date, time(12, 0), tzinfo=UTC)
     else:
@@ -681,7 +683,10 @@ def check(ctx: Context, out: TextIO) -> int:
     """Setup check: API key, model names and feeds. Changes nothing."""
     config = ctx.config
     _, key_env = provider_settings(config)
-    lines = [f"Provider: {config.llm_provider} (key in {key_env})"]
+    lines = [
+        f"Series: {templates.setting('series_theme')}, by {templates.setting('author_name')}",
+        f"Provider: {config.llm_provider} (key in {key_env})",
+    ]
     problems = 0
     try:
         llm = ctx.services.llm_factory(config)
