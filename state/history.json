@@ -1,3 +1,65 @@
 {
-  "posts": []
+  "posts": [],
+  "pending": {
+    "record": {
+      "date": "2026-11-01",
+      "post_type": "news",
+      "tone": "straight",
+      "format": "question",
+      "text": "Who inside your company gets the final say about AI scraping your team's documentation?\n\nA handful of big AI labs just agreed to honor a new, shared opt-out signal in robots.txt files. If you add the token, their web crawlers for training data should skip your site. That's the technical promise.\n\nThe hard part now is the internal process. Legal might want one thing, marketing another, and the engineering team that wrote the docs was never in that meeting. This solves a coordination problem between you and the AI companies, but the coordination problem inside your own walls is still yours.\n\nMy bet is the teams that figure out their internal policy first will have one less surprise to deal with later.\n\nhttps://openai.com/index/helping-websites-express-ai-training-preferences\n\n#AI #WebStandards #Engineering",
+      "slug": "openai-and-other-major-ai-companies-to-honor-new-w",
+      "topic_id": null,
+      "topic_title": null,
+      "news_story": {
+        "key": "openai-and-other-major-ai-companies-to-honor-new-web-opt-out-standard-for-ai-tra",
+        "title": "OpenAI and other major AI companies to honor new web opt-out standard for AI training",
+        "summary": "OpenAI, Google, Microsoft, and Anthropic have committed to honoring a new, shared signal within website robots.txt files that allows publishers to set a single preference regarding AI training data scraping.",
+        "date": "2026-10-30",
+        "sources": [
+          {
+            "url": "https://openai.com/index/helping-websites-express-ai-training-preferences",
+            "title": "Making it easier for websites to express AI training preferences",
+            "publisher": "OpenAI News",
+            "official": true
+          },
+          {
+            "url": "https://www.theverge.com/tech/1023763/openai-google-microsoft-ai-scraping-standard-opt-out",
+            "title": "The biggest names in AI are backing a new way to opt out of scraping",
+            "publisher": "The Verge AI",
+            "official": false
+          }
+        ],
+        "angle": "Engineers need to update their site's robots.txt now to control how their content enters future models.",
+        "details": [
+          "The shared signal, or 'policy token', is proposed by an Anthropic technical lead as part of the IETF standards body. [A2]",
+          "This control allows publishers to apply their AI training preferences across multiple AI companies at once, instead of having to signal to each one individually. [A2]",
+          "The companies will restrict their AI crawlers from accessing sites that use the shared token. [A2]",
+          "While Anthropic has already adopted it, Google and Microsoft plan support next year, and OpenAI will implement it 'in the coming months'. [A2]"
+        ]
+      },
+      "sources": [
+        {
+          "url": "https://openai.com/index/helping-websites-express-ai-training-preferences",
+          "title": "Making it easier for websites to express AI training preferences",
+          "publisher": "OpenAI News",
+          "official": true
+        },
+        {
+          "url": "https://www.theverge.com/tech/1023763/openai-google-microsoft-ai-scraping-standard-opt-out",
+          "title": "The biggest names in AI are backing a new way to opt out of scraping",
+          "publisher": "The Verge AI",
+          "official": false
+        }
+      ],
+      "editor_score": 8,
+      "humour_score": null,
+      "attempts": 3,
+      "urn": null,
+      "linkedin_url": null
+    },
+    "created_at": "2026-11-01T20:25:45.892241+00:00",
+    "publish_after": "2026-11-02T16:25:45.892241+00:00",
+    "issue_number": 31,
+    "research_notes": "Verified story (2026-10-30): OpenAI and other major AI companies to honor new web opt-out standard for AI training\nOpenAI, Google, Microsoft, and Anthropic have committed to honoring a new, shared signal within website robots.txt files that allows publishers to set a single preference regarding AI training data scraping.\n   Details stated in the articles:\n   - The shared signal, or 'policy token', is proposed by an Anthropic technical lead as part of the IETF standards body. [A2]\n   - This control allows publishers to apply their AI training preferences across multiple AI companies at once, instead of having to signal to each one individually. [A2]\n   - The companies will restrict their AI crawlers from accessing sites that use the shared token. [A2]\n   - While Anthropic has already adopted it, Google and Microsoft plan support next year, and OpenAI will implement it 'in the coming months'. [A2]\n   Sources:\n   - OpenAI News (official) <https://openai.com/index/helping-websites-express-ai-training-preferences>\n   - The Verge AI <https://www.theverge.com/tech/1023763/openai-google-microsoft-ai-scraping-standard-opt-out>"
+  }
 }
