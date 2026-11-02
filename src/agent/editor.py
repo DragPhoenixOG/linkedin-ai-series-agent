@@ -131,12 +131,31 @@ def is_real_problem(text: str) -> bool:
     return not (nothing or _LOOKS_FINE.search(rest))
 
 
+_PROBLEM_FIELDS = ("sentence", "reason", "problem")
+
+
+def _as_text(item: Any) -> str:
+    """One problem as text. Some editors send {"sentence": ..., "reason": ...} instead of a string,
+    or put the problem in the key: {"The draft uses ...": "Line reads: ..."}."""
+    if not isinstance(item, dict):
+        return str(item).strip()
+    sentence = str(item.get("sentence") or "").strip()
+    reason = str(item.get("reason") or item.get("problem") or "").strip()
+    if sentence:
+        return f'"{sentence}" {reason}'.strip()
+    if reason:
+        return reason
+    others = (f"{k} {v or ''}".strip() for k, v in item.items() if k not in _PROBLEM_FIELDS)
+    return " ".join(others).strip()
+
+
 def _problems(items: Any) -> list[str]:
-    if isinstance(items, str):
+    if isinstance(items, str | dict):
         items = [items]
     if not isinstance(items, list):
         return []
-    return [str(p).strip() for p in items if is_real_problem(str(p))]
+    texts = [_as_text(p) for p in items]
+    return [t for t in texts if is_real_problem(t)]
 
 
 def parse_review(data: Any, humorous: bool) -> EditorReview:

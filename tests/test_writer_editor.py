@@ -241,6 +241,23 @@ def test_real_problems_are_kept(problem: str) -> None:
     assert is_real_problem(problem)
 
 
+def test_problems_sent_as_objects_are_read_and_empty_ones_dropped() -> None:
+    review = parse_review(
+        {
+            "human_score": 8,
+            "rewrite": "x",
+            "fact_problems": [
+                {"sentence": ""},
+                {"sentence": "We built it.", "reason": "Invented."},
+            ],
+            "rule_problems": {"The draft uses a banned contrast setup.": "Line reads: ..."},
+        },
+        humorous=False,
+    )
+    assert review.fact_problems == ['"We built it." Invented.']
+    assert review.rule_problems == ["The draft uses a banned contrast setup. Line reads: ..."]
+
+
 def test_review_drops_notes_that_nothing_is_wrong() -> None:
     review = parse_review(
         {
