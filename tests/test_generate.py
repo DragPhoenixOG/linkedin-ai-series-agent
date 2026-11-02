@@ -312,3 +312,11 @@ def test_the_fix_prompt_knows_the_word_count() -> None:
     fix_prompt = next(c["prompt"] for c in llm.calls if c["label"] == "writer.fix")
     words = lint_post(BAD_POST, LintLimits.from_config(Config()), []).word_count
     assert f"The post has {words} words" in fix_prompt and "between 120 and 250" in fix_prompt
+
+
+def test_model_artifacts_are_removed_before_anything_is_checked() -> None:
+    wrapped = f"Here's the post for LinkedIn:\n\n{CLEAN_POST.replace('boring', '*boring*', 1)}"
+    llm = FakeLLM({"writer": f"<post>{wrapped}</post>", "editor": review(9, "")})
+    result = generate_post(llm, Config(), brief())
+    assert result.success and result.best.text == CLEAN_POST
+    assert "Here's the post" not in llm.calls[1]["prompt"]  # the editor saw the cleaned text
