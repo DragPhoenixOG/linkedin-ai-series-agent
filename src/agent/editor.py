@@ -190,16 +190,31 @@ def describe_personal_claims(draft: str) -> str:
 
 
 _NUMBER = re.compile(r"\d[\d,]*(?:\.\d+)?")
+# Big amounts written in words: "a trillion dollars", "two billion orders", "$1.5 million".
+_WORD_AMOUNT = re.compile(
+    r"\b(a|an|one|two|three|four|five|six|seven|eight|nine|ten|\d[\d,]*(?:\.\d+)?)\s+"
+    r"(million|billion|trillion)\b",
+    re.IGNORECASE,
+)
+_SMALL_WORDS = {
+    "a": "1", "an": "1", "one": "1", "two": "2", "three": "3", "four": "4", "five": "5",
+    "six": "6", "seven": "7", "eight": "8", "nine": "9", "ten": "10",
+}  # fmt: skip
 
 
 def _numbers(text: str) -> set[str]:
-    return {n.replace(",", "").rstrip(".") for n in _NUMBER.findall(text)}
+    found = {n.replace(",", "").rstrip(".") for n in _NUMBER.findall(text)}
+    for count, size in _WORD_AMOUNT.findall(text):
+        count = _SMALL_WORDS.get(count.lower(), count.replace(",", ""))
+        found.add(f"{count} {size.lower()}")
+    return found
 
 
 def numbers_to_check(text: str, known: str = "") -> list[str]:
-    """Sentences with a figure in digits that isn't in `known` (the research and author facts).
+    """Sentences with a figure that isn't in `known` (the research and author facts).
 
-    Vague words like "thousands" aren't figures, and hashtags and links are skipped.
+    A figure is a number in digits or a big amount in words ("a trillion dollars"). Vague words
+    like "thousands" or "a thousand" aren't figures, and hashtags and links are skipped.
     """
     known_numbers = _numbers(known)
     found = []

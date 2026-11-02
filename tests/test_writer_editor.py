@@ -396,6 +396,19 @@ def test_sentences_with_numbers_are_listed_for_the_editor() -> None:
     assert "## Numbers to check\n\nNone found." in llm.calls[1]["prompt"]
 
 
+def test_big_amounts_in_words_are_checked_against_the_research() -> None:
+    known = "Alphabet saw a $500 billion market value drop. Amazon committed $220 billion."
+    post = (
+        "Last week a trillion dollars in market value vanished. Alphabet lost $500 billion. "
+        "Amazon is spending 220 billion on data centers. It has a thousand moving parts."
+    )
+    # "a trillion" isn't in the research; $500 billion and 220 billion are; "a thousand" is vague.
+    assert numbers_to_check(post, known) == [
+        "Last week a trillion dollars in market value vanished."
+    ]
+    assert numbers_to_check("Two billion orders went through.", "2 billion orders") == []
+
+
 def test_figures_in_the_research_or_author_facts_are_not_listed() -> None:
     llm = FakeLLM({"editor": {"human_score": 9, "rewrite": "x"}})
     voice = Voice(style_guide="S", author_facts="About 2 years of experience.")

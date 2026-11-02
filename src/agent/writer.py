@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Any
 
 from agent.config import Config
-from agent.lint import ends_with_question, has_bullets, opening_line
+from agent.lint import count_words, ends_with_question, has_bullets, opening_line
 from agent.llm import LLM, LLMAuthError, LLMError
 from agent.logs import log_event
 from agent.state import NewsStory
@@ -244,7 +244,14 @@ def fix_sentences(
     Returns the edited post, or None if no edit could be applied (the caller then revises the
     whole post instead).
     """
-    prompt = render("fix_sentences", post=post, problems="\n".join(f"- {p}" for p in problems))
+    prompt = render(
+        "fix_sentences",
+        post=post,
+        problems="\n".join(f"- {p}" for p in problems),
+        words=count_words(post),
+        min_words=config.min_words,
+        max_words=config.max_words,
+    )
     try:
         data, _ = llm.complete_json(
             label="writer.fix",

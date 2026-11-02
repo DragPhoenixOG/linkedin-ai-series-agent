@@ -28,9 +28,10 @@ Every day at 03:30 UTC (9:00 AM IST) a GitHub Actions run:
    official one, and every key fact is checked against the article text.
 5. Writes the post and checks it three ways: deterministic lint, a separate "blunt editor"
    model that scores it, and a list of every sentence where the author claims to have done or
-   seen something, which the editor must check against the author facts. If the scores pass but
-   a few sentences break a rule, only those sentences are rewritten. Otherwise the writer
-   redrafts with the feedback: up to 5 full drafts, plus up to 2 sentence-fix rounds.
+   seen something, which the editor must check against the author facts. If the draft is nearly
+   there (scores pass or miss by one point, and any rule breaks sit in single sentences), only
+   the flagged sentences are rewritten. Otherwise the writer redrafts with the feedback: up to 5
+   full drafts, plus up to 4 sentence-fix rounds.
 6. Posts only text that the editor scored and lint passed. By default it first emails you the
    draft as a GitHub issue and publishes it on the next day's run, unless you reject it.
 7. Publishes through the LinkedIn Posts API, commits the updated history back to the repo, and
@@ -114,6 +115,11 @@ personal facts the agent may use in `content/author.md`, and the research source
   made-up source. Specifics about companies and products must come from the listed details.
 - **Fix the sentence, not the post.** When a draft is nearly there, only the flagged sentences
   are replaced, and code splices them in, so the rest of the post can't pick up new problems.
+  A draft one point short of the bar counts as nearly there: the point is lost in the sentences
+  the editor flagged, and a full redraft tended to swap them for new ones.
+- **Numbers are checked.** Any figure in the post that isn't in the research or author facts,
+  in digits or as a big amount in words ("a trillion dollars"), is listed for the editor to
+  check.
 - **Only checked text is posted.** The post that goes out is always the exact text the editor
   scored and lint passed.
 
@@ -453,7 +459,7 @@ from this series leaks into it.
 ## Costs
 
 - **Model, open models on Bedrock (current):** a posting day makes roughly 5 to 25 model calls
-  (research or news scan and verification, then up to 5 drafts and 2 sentence fixes, each
+  (research or news scan and verification, then up to 5 drafts and 4 sentence fixes, each
   reviewed by the editor), about 15-65 thousand input tokens and a few thousand output tokens.
   DeepSeek V3.2 is listed at about $0.62 per million input tokens and $1.85 per million output
   tokens, so expect a few cents per post and well under $1 a month. Prices for these models
@@ -546,12 +552,15 @@ original brief in `CLAUDE.md`, that's noted and was agreed.
   invented stories and wrong facts into it. The editor still returns a rewrite (kept for
   reference), but the writer fixes the flagged problems, and only a version the editor scored
   and lint passed can be posted.
-- **Up to 5 drafts plus 2 sentence fixes (change from the brief).** The brief allows 3 rounds.
+- **Up to 5 drafts plus 4 sentence fixes (change from the brief).** The brief allows 3 rounds.
   With open models, posts often came within one round of passing, so `max_attempts` is 5. On
-  top of that, when a draft's scores pass but a few sentences break a rule (banned phrase,
-  contrast setup, em dashes, repeated starts, lists of three, length, an unsupported claim),
-  the writer returns find-and-replace edits for just those sentences, code applies them, and the
-  result is scored and linted again, up to 2 times. A post that still fails isn't published.
+  top of that, when a draft is nearly there, the writer returns find-and-replace edits for just
+  the flagged sentences, code applies them, and the result is scored and linted again. Nearly
+  there means the editor's scores pass or miss by one point and any rule breaks sit in single
+  sentences (banned phrase, contrast setup, em dashes, repeated starts, lists of three, length,
+  an unsupported claim). On a one-point miss the sentences the editor called AI-sounding are
+  rewritten too. Up to 2 fixes in a row on one draft and 4 per run. The bar itself doesn't
+  move: a post that still fails isn't published.
 - **The series is configurable.** Who writes it and what it covers were written into the prompts;
   they now come from `content/series.yaml`, so the agent can run anyone's series. With this
   series' values the prompts read as before, except that "he" and "his" became the author's name

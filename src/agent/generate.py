@@ -1,7 +1,7 @@
 """The write -> edit -> lint loop with retries (CLAUDE.md section 4, "Two-pass generation").
 
-Each attempt: the writer drafts (or fixes the flagged sentences of the last version), the editor
-scores that exact text and lists its problems, and the deterministic lint checks it. A post
+Each attempt: the writer drafts (or fixes the flagged sentences of a nearly-there version), the
+editor scores that exact text and lists its problems, and the deterministic lint checks it. A post
 passes when the editor's scores clear the bar and lint is clean. Otherwise the problems are fed
 back and the writer tries again, up to `max_attempts`. If nothing passes, the caller gets the best
 attempt and the reasons, and must not publish.
@@ -93,9 +93,11 @@ def build_feedback(attempt: Attempt) -> str:
     return "\n".join(f"- {item}" for item in items)
 
 
-# Sentence-fix rounds allowed on top of `max_attempts` full drafts, so a post that is one
-# sentence away from passing always gets its repair, even after the last full draft.
-MAX_FIX_ROUNDS = 2
+# Sentence-fix rounds allowed on top of `max_attempts` full drafts, so a post that is a few
+# sentences away from passing always gets its repair, even after the last full draft. At most
+# MAX_FIXES_PER_DRAFT in a row on one draft, so later drafts get their chance too.
+MAX_FIX_ROUNDS = 4
+MAX_FIXES_PER_DRAFT = 2
 
 
 def generate_post(llm: LLM, config: Config, brief: PostBrief) -> GenerationResult:
@@ -105,13 +107,13 @@ def generate_post(llm: LLM, config: Config, brief: PostBrief) -> GenerationResul
     feedback: str | None = None
     previous: str | None = None
     fixed: str | None = None
-    drafts = fixes = 0
+    drafts = fixes = streak = 0
     while True:
         if fixed:
-            text, fixes = fixed, fixes + 1
+            text, fixes, streak = fixed, fixes + 1, streak + 1
         else:
             text = write_draft(llm, config, brief, feedback=feedback, previous=previous)
-            drafts += 1
+            drafts, streak = drafts + 1, 0
         text = limit_em_dashes(text, config.max_em_dashes)
         number = len(result.attempts) + 1
         lint = lint_post(text, limits, brief.recent_posts)
@@ -136,10 +138,12 @@ def generate_post(llm: LLM, config: Config, brief: PostBrief) -> GenerationResul
         feedback = build_feedback(attempt)
         previous = text
         fixed = None
-        if fixes < MAX_FIX_ROUNDS and only_sentence_problems(attempt, brief, config):
-            # Scores already pass: change just the flagged sentences rather than redraft, so the
-            # rest of a nearly-there post can't pick up new problems.
-            fixed = fix_sentences(llm, config, brief, text, sentence_problems(attempt))
+        can_fix = fixes < MAX_FIX_ROUNDS and streak < MAX_FIXES_PER_DRAFT
+        if can_fix and only_sentence_problems(attempt, brief, config):
+            # Nearly there: change just the flagged sentences rather than redraft, so the rest of
+            # the post can't pick up new problems.
+            items = sentence_problems(attempt, brief, config)
+            fixed = fix_sentences(llm, config, brief, text, items) if items else None
         if not fixed and drafts >= config.max_attempts:
             break
     return result
@@ -157,19 +161,34 @@ LOCAL_RULES = {
 
 
 def only_sentence_problems(attempt: Attempt, brief: PostBrief, config: Config) -> bool:
-    """True when the editor's scores pass and every remaining problem is in specific sentences."""
+    """True when the post is nearly there and every remaining problem is in specific sentences.
+
+    Nearly there means each editor score passes or is one point short. A one-point miss comes
+    from the sentences the editor flagged, so rewriting those is the targeted fix; a full redraft
+    tends to swap them for new problems.
+    """
     review = attempt.review
     if not review.is_complete(brief.tone == "humorous"):
         return False
-    if review.human_score < config.min_editor_score:
+    if review.human_score < config.min_editor_score - 1:
         return False
-    if brief.tone == "humorous" and (review.humour_score or 0) < config.min_humour_score:
+    if brief.tone == "humorous" and (review.humour_score or 0) < config.min_humour_score - 1:
         return False
     return all(i.rule in LOCAL_RULES for i in attempt.lint.issues)
 
 
-def sentence_problems(attempt: Attempt) -> list[str]:
-    """The lint issues and fact problems to fix sentence by sentence."""
+def sentence_problems(attempt: Attempt, brief: PostBrief, config: Config) -> list[str]:
+    """The problems to fix sentence by sentence.
+
+    Always the lint issues and fact problems. When a score is short of the bar, also every
+    sentence the editor said sounds like AI: those are what cost the point.
+    """
+    review = attempt.review
     items = [f"Lint [{i.rule}]: {i.detail}" for i in attempt.lint.issues]
-    items += [f"Unsupported claim: {p}" for p in attempt.review.fact_problems]
+    items += [f"Unsupported claim: {p}" for p in review.fact_problems]
+    short = review.human_score < config.min_editor_score or (
+        brief.tone == "humorous" and (review.humour_score or 0) < config.min_humour_score
+    )
+    if short:
+        items += [f'Sounds like AI: "{a["sentence"]}" ({a["reason"]})' for a in review.ai_sounding]
     return items
