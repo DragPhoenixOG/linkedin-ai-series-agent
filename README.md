@@ -128,9 +128,9 @@ Fork or clone this repository. Everything below happens in your copy.
 
 ### 2. Model provider
 
-The repo is set up for **open models on Amazon Bedrock**: DeepSeek V3.2 writes and researches,
-and Mistral Large 3 edits. They cost a few cents a month and were the most reliable combination
-in testing. Other providers are a config change away.
+The repo is set up for **open models on Amazon Bedrock**: Kimi K2.5 writes, DeepSeek V3.2
+researches, and Mistral Large 3 edits. They cost a few cents a month and were the most reliable
+combination in testing. Other providers are a config change away.
 
 | `llm_provider` | Key secret | Models | Cost |
 |---|---|---|---|
@@ -155,7 +155,7 @@ in testing. Other providers are a config change away.
 
    ```yaml
    llm_provider: bedrock-openai
-   writer_model: deepseek.v3.2
+   writer_model: moonshotai.kimi-k2.5
    editor_model: mistral.mistral-large-3-675b-instruct
    research_model: deepseek.v3.2
    fallback_model: mistral.mistral-large-3-675b-instruct
@@ -167,11 +167,15 @@ in testing. Other providers are a config change away.
    you can swap any of the four model names for another one from that list.
 
 What we learned picking models: the writer must reliably follow "never write X" rules, and the
-editor must be strict about facts but not invent problems. Kimi K2.5 kept writing banned
-"isn't X. It's Y" lines; DeepSeek V3.2 as editor got word counts wrong and missed invented
-stories; Kimi K2 Thinking spent its whole output budget thinking before it reviewed anything.
-Mistral Large 3 was the most accurate editor. A different model as editor than as writer also avoids a model going
-easy on its own text.
+editor must be strict about facts but not invent problems. As writer, DeepSeek V3.2 kept ending
+posts on slogan lines and stalled at 7/10 on straight posts. Kimi K2.5 uses the research details
+more concretely: on 2 Nov 2026 it passed 4 of 5 dry runs (all four kinds of post) against 1 of 4
+for DeepSeek. It also takes more liberties, such as invented "I've watched teams..." moments
+and edgier jokes; the editor catches most, and the review window covers the rest. DeepSeek V3.2
+as editor got word counts wrong and missed invented stories; Kimi K2 Thinking spent its whole
+output budget thinking before it reviewed anything. Mistral Large 3 was the most accurate
+editor. A different model as editor than as writer also avoids a model going easy on its own
+text. To compare writers yourself, use the **writer_model** run option (step 6).
 
 #### Claude (direct, or on Bedrock)
 
@@ -464,7 +468,8 @@ from this series leaks into it.
   (research or news scan and verification, then up to 5 drafts and 3 sentence fixes, each
   reviewed by the editor), about 15-65 thousand input tokens and a few thousand output tokens.
   DeepSeek V3.2 is listed at about $0.62 per million input tokens and $1.85 per million output
-  tokens, so expect a few cents per post and well under $1 a month. Prices for these models
+  tokens; check the Bedrock pricing page for Kimi K2.5 and Mistral Large 3. At these volumes
+  expect a few cents per post. Prices for these models
   aren't in `config.yaml`, so the `est_cost_usd` in the run summary shows 0: check **AWS Billing
   > Bills** for the real figure. Charges under "Amazon Bedrock" can be covered by AWS credits;
   charges under "AWS Marketplace" go to your card.
@@ -476,8 +481,8 @@ from this series leaks into it.
 
 ## Limitations
 
-- **Open models pass less often than Claude.** With DeepSeek and Mistral, most posting days pass
-  within the 5 drafts, but some don't; those days post nothing and retry the next day. Claude is
+- **Open models pass less often than Claude.** With Kimi, DeepSeek and Mistral, most posting
+  days pass within the 5 drafts, but some don't; those days post nothing and retry the next day. Claude is
   a config change away if that gets annoying.
 - **The editor is a model too.** It occasionally flags something that's fine or misses something
   that isn't. The deterministic lint, the personal-claims check and the "details only from the
