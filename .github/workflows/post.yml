@@ -29,6 +29,15 @@ on:
         type: choice
         options: [auto, straight, humorous]
         default: auto
+      format:
+        description: "Force the format (dry runs: by default every run on one day picks the same one)"
+        type: choice
+        options: [auto, observation, contrarian, explainer, mistake, question, story, news_reaction, dry_take]
+        default: auto
+      writer_model:
+        description: "Try another writer model for this run, e.g. moonshotai.kimi-k2.5 (optional)"
+        type: string
+        required: false
       check:
         description: "Only check the API key, model names and research feeds"
         type: boolean
@@ -76,15 +85,19 @@ jobs:
           TOPIC_ID: ${{ inputs.topic_id }}
           POST_TYPE: ${{ inputs.post_type }}
           TONE: ${{ inputs.tone }}
+          FORMAT: ${{ inputs.format }}
+          WRITER_MODEL: ${{ inputs.writer_model }}
           CHECK: ${{ inputs.check }}
         run: |
           args=()
-          if [ "$CHECK" = "true" ]; then python -m agent.main --check; exit $?; fi
+          if [ -n "$WRITER_MODEL" ]; then args+=(--writer-model "$WRITER_MODEL"); fi
+          if [ "$CHECK" = "true" ]; then python -m agent.main --check "${args[@]}"; exit $?; fi
           if [ "$DRY_RUN" = "true" ]; then args+=(--dry-run); fi
           if [ "$FORCE" = "true" ]; then args+=(--force); fi
           if [ -n "$TOPIC_ID" ]; then args+=(--topic-id "$TOPIC_ID"); fi
           if [ -n "$POST_TYPE" ] && [ "$POST_TYPE" != "auto" ]; then args+=(--post-type "$POST_TYPE"); fi
           if [ -n "$TONE" ] && [ "$TONE" != "auto" ]; then args+=(--tone "$TONE"); fi
+          if [ -n "$FORMAT" ] && [ "$FORMAT" != "auto" ]; then args+=(--format "$FORMAT"); fi
           python -m agent.main "${args[@]}"
 
       # Runs even if the agent failed, so a published post is always recorded.

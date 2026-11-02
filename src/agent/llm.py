@@ -217,6 +217,7 @@ class OpenAICompatLLM(LLM):
         self._sleep = sleep
         self._overloaded: set[str] = set()  # models that kept failing this run
         self._no_json_mode: set[str] = set()  # models whose endpoint rejected JSON mode
+        self._completion_tokens: set[str] = set()  # models that want `max_completion_tokens`
 
     def _model_for(self, model: str) -> str:
         fallback = self.config.fallback_model
@@ -287,6 +288,25 @@ class OpenAICompatLLM(LLM):
             self._sleep(min(delay, 90.0))
             attempt += 1
 
+    def _send(self, label: str, body: dict[str, Any]) -> dict[str, Any]:
+        """POST; resend with `max_completion_tokens` if the model rejects `max_tokens`.
+
+        Newer OpenAI models (GPT-5 and later) only accept `max_completion_tokens`.
+        """
+        if body["model"] in self._completion_tokens and "max_tokens" in body:
+            body["max_completion_tokens"] = body.pop("max_tokens")
+        try:
+            return self._post(label, body)
+        except LLMAuthError:
+            raise
+        except LLMError as exc:
+            if "max_completion_tokens" not in str(exc) or "max_tokens" not in body:
+                raise
+            log_event(logger, "llm.max_completion_tokens", model=body["model"])
+            self._completion_tokens.add(body["model"])
+            body["max_completion_tokens"] = body.pop("max_tokens")
+            return self._post(label, body)
+
     def complete(
         self,
         *,
@@ -312,16 +332,18 @@ class OpenAICompatLLM(LLM):
             # JSON mode makes the server return valid JSON (no stray quotes or fences).
             body["response_format"] = {"type": "json_object"}
             try:
-                data = self._post(label, body)
+                data = self._send(label, body)
+            except LLMAuthError:
+                raise
             except LLMError as exc:
                 if "request rejected" not in str(exc):
                     raise
                 log_event(logger, "llm.json_mode_unsupported", logging.WARNING, model=body["model"])
                 self._no_json_mode.add(body["model"])
                 del body["response_format"]
-                data = self._post(label, body)
+                data = self._send(label, body)
         else:
-            data = self._post(label, body)
+            data = self._send(label, body)
         model = body["model"]  # the fallback, if the requested model was overloaded
         usage = data.get("usage") or {}
         call = self.usage.add(

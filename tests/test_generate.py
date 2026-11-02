@@ -245,9 +245,9 @@ def test_fix_rounds_are_capped() -> None:
         for c in llm.calls
         if "writer" in c["label"]
     ]
-    # At most 2 fixes in a row on one draft, 4 in all, then the remaining full drafts.
-    assert kinds == ["draft", "fix", "fix", "draft", "fix", "fix", "draft", "draft", "draft"]
-    assert len(result.attempts) == 5 + 4
+    # At most 2 fixes in a row on one draft, 3 in all, then the remaining full drafts.
+    assert kinds == ["draft", "fix", "fix", "draft", "fix", "draft", "draft", "draft"]
+    assert len(result.attempts) == 5 + 3
 
 
 def test_a_slightly_short_post_gets_a_sentence_fix_not_a_redraft() -> None:
@@ -283,66 +283,32 @@ def test_extra_em_dashes_become_commas_before_anything_is_checked() -> None:
     assert "\u2014" not in llm.calls[1]["prompt"].split("<draft>")[1]  # the editor saw commas
 
 
-def test_a_one_point_miss_gets_its_ai_sounding_sentences_fixed() -> None:
+def test_a_one_point_miss_gets_a_full_redraft_not_a_sentence_fix() -> None:
     first = CLEAN_POST.splitlines()[0]
-    better = "A plainer opening line that says the same thing."
     flagged = [{"sentence": first, "reason": "slogan"}]
     llm = FakeLLM(
         {
             "writer": f"<post>{CLEAN_POST}</post>",
             "editor": seq(review(7, "", ai=flagged), review(8, "")),
-            "writer.fix": {"edits": [{"find": first, "replace": better}]},
-        }
-    )
-    result = generate_post(llm, Config(), brief())
-    assert result.success and len(result.attempts) == 2
-    assert [c["label"] for c in llm.calls].count("writer") == 1  # no full redraft
-    assert result.best.text == CLEAN_POST.replace(first, better)
-    fix_prompt = next(c["prompt"] for c in llm.calls if c["label"] == "writer.fix")
-    assert f'Sounds like AI: "{first}" (slogan)' in fix_prompt
-    words = lint_post(CLEAN_POST, LintLimits.from_config(Config()), []).word_count
-    assert f"The post has {words} words" in fix_prompt and "between 120 and" in fix_prompt
-
-
-def test_a_one_point_humour_miss_is_also_nearly_there() -> None:
-    first = CLEAN_POST.splitlines()[0]
-    flagged = [{"sentence": first, "reason": "forced joke"}]
-    llm = FakeLLM(
-        {
-            "writer": f"<post>{CLEAN_POST}</post>",
-            "editor": seq(review(8, "", humour=6, ai=flagged), review(8, "", humour=7)),
-            "writer.fix": {"edits": [{"find": first, "replace": "A drier first line."}]},
-        }
-    )
-    result = generate_post(llm, Config(), brief(tone="humorous"))
-    assert result.success
-    assert [c["label"] for c in llm.calls].count("writer") == 1
-
-
-def test_a_passing_score_only_fixes_lint_not_every_flagged_sentence() -> None:
-    bad_sentence = next(line for line in BAD_POST.splitlines() if "robust" in line)
-    good_sentence = bad_sentence.replace("robust engineering", "boring engineering")
-    first = BAD_POST.splitlines()[0]
-    llm = FakeLLM(
-        {
-            "writer": f"<post>{BAD_POST}</post>",
-            "editor": review(9, "", ai=[{"sentence": first, "reason": "a bit flat"}]),
-            "writer.fix": {"edits": [{"find": bad_sentence, "replace": good_sentence}]},
-        }
-    )
-    result = generate_post(llm, Config(), brief())
-    assert result.success
-    fix_prompt = next(c["prompt"] for c in llm.calls if c["label"] == "writer.fix")
-    assert "Sounds like AI" not in fix_prompt  # the score passed: leave those sentences alone
-
-
-def test_a_one_point_miss_with_nothing_flagged_gets_a_full_revision() -> None:
-    llm = FakeLLM(
-        {
-            "writer": f"<post>{CLEAN_POST}</post>",
-            "editor": seq(review(7, ""), review(8, "")),
         }
     )
     result = generate_post(llm, Config(), brief())
     assert result.success
     assert "writer.fix" not in [c["label"] for c in llm.calls]
+    assert [c["label"] for c in llm.calls].count("writer") == 2
+
+
+def test_the_fix_prompt_knows_the_word_count() -> None:
+    bad_sentence = next(line for line in BAD_POST.splitlines() if "robust" in line)
+    good_sentence = bad_sentence.replace("robust engineering", "boring engineering")
+    llm = FakeLLM(
+        {
+            "writer": f"<post>{BAD_POST}</post>",
+            "editor": review(9, ""),
+            "writer.fix": {"edits": [{"find": bad_sentence, "replace": good_sentence}]},
+        }
+    )
+    generate_post(llm, Config(), brief())
+    fix_prompt = next(c["prompt"] for c in llm.calls if c["label"] == "writer.fix")
+    words = lint_post(BAD_POST, LintLimits.from_config(Config()), []).word_count
+    assert f"The post has {words} words" in fix_prompt and "between 120 and 250" in fix_prompt

@@ -17,7 +17,7 @@ import os
 import random
 import sys
 from collections.abc import Callable
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import UTC, date, datetime, time, timedelta
 from pathlib import Path
 from typing import Any, TextIO
@@ -101,6 +101,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--format", choices=sorted(mix.FORMATS), help="override post format")
     parser.add_argument("--date", type=date.fromisoformat, help="pretend today is YYYY-MM-DD")
     parser.add_argument("--seed", type=int, help="random seed for the content mix")
+    parser.add_argument("--writer-model", help="use this writer model instead of config.yaml's")
     parser.add_argument("--root", type=Path, default=Path.cwd(), help="repository root")
     parser.add_argument("--output", type=Path, help="also write the dry-run report to this file")
     parser.add_argument("--log-level", default="INFO")
@@ -652,6 +653,8 @@ def run(
     root: Path = args.root
     load_dotenv(root / ".env")
     config = load_config(root / "config.yaml")
+    if args.writer_model:
+        config = replace(config, writer_model=args.writer_model)
     templates.use_series(load_series(root / "content"))
     if args.date:
         today, now = args.date, datetime.combine(args.date, time(12, 0), tzinfo=UTC)

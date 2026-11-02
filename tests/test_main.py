@@ -176,6 +176,26 @@ def test_dry_run_skill_post_end_to_end_without_writes(root: Path) -> None:
     assert labels == ["research.queries", "research", "writer", "editor"]  # first post: no news
 
 
+def test_writer_model_can_be_swapped_for_one_run(root: Path) -> None:
+    llm = FakeLLM(
+        {**research_replies(), "writer": f"<post>{CLEAN_POST}</post>", "editor": editor_reply()}
+    )
+    code, _ = go(root, llm, "--dry-run", "--force", "--writer-model", "other.writer-1")
+    assert code == EXIT_OK
+    models = {c["label"]: c["model"] for c in llm.calls}
+    assert models["writer"] == "other.writer-1"
+    assert models["editor"] != "other.writer-1"  # only the writer changes
+
+
+def test_format_can_be_forced(root: Path) -> None:
+    llm = FakeLLM(
+        {**research_replies(), "writer": f"<post>{CLEAN_POST}</post>", "editor": editor_reply()}
+    )
+    code, output = go(root, llm, "--dry-run", "--force", "--format", "question")
+    assert code == EXIT_OK
+    assert "Format:   Question-led" in output
+
+
 def test_dry_run_uses_the_series_in_content(root: Path) -> None:
     """Swap in another person's series: every prompt the models see is theirs, not Ashish's."""
     from test_series import AGRICULTURE

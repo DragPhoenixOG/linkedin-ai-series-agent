@@ -158,6 +158,28 @@ def test_compat_drops_json_mode_when_the_endpoint_rejects_it() -> None:
     assert ["response_format" in b for b in seen] == [True, False, False]  # asked once per model
 
 
+def test_compat_switches_to_max_completion_tokens_when_asked() -> None:
+    seen: list[dict] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        body = json.loads(request.content)
+        seen.append(body)
+        if "max_tokens" in body:
+            message = "Unsupported parameter: 'max_tokens'. Use 'max_completion_tokens' instead."
+            return httpx.Response(400, json={"error": {"message": message}})
+        return httpx.Response(200, json=chat_reply('{"ok": true}'))
+
+    llm = compat(handler)
+    schema = {"type": "object", "required": ["ok"]}
+    data, _ = llm.complete_json(label="t", model="m", system=["s"], prompt="p", json_schema=schema)
+    assert data == {"ok": True}
+    assert ask(llm, model="m").text == '{"ok": true}'
+    # One rejected request, then the right parameter every time; JSON mode is kept.
+    assert ["max_tokens" in b for b in seen] == [True, False, False]
+    assert all("max_completion_tokens" in b for b in seen[1:])
+    assert "response_format" in seen[1]
+
+
 def test_compat_retries_rate_limits_and_server_errors() -> None:
     replies = iter(
         [
