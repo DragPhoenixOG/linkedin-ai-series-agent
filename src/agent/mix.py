@@ -45,11 +45,7 @@ FORMATS: dict[str, Format] = {
         Format(
             "mistake",
             "Mistake / lesson",
-            "A mistake people (or teams) commonly make, and what to do instead. Show the "
-            "mistake through one concrete case (a detail from the research, an author fact, or a "
-            'scenario opened as made up with "Say..." or "Picture...") rather than announcing '
-            "it, then say plainly what you'd do instead. Don't label the parts (\"The mistake "
-            'is...", "The lesson:", "The fix:") and don\'t end on a moral.',
+            "A mistake people (or teams) commonly make, and what to do instead.",
         ),
         Format(
             "question",

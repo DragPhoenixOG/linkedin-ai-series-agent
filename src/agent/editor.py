@@ -18,7 +18,7 @@ from agent.lint import LintResult, sentences
 from agent.llm import LLM, LLMAuthError, LLMError
 from agent.logs import log_event
 from agent.templates import fragment, render, setting
-from agent.writer import PostBrief, describe_dates, format_recent_posts, tidy_post
+from agent.writer import PostBrief, format_recent_posts, tidy_post
 
 logger = logging.getLogger(__name__)
 
@@ -189,55 +189,6 @@ def describe_personal_claims(draft: str) -> str:
     )
 
 
-_NUMBER = re.compile(r"\d[\d,]*(?:\.\d+)?")
-# Big amounts written in words: "a trillion dollars", "two billion orders", "$1.5 million".
-_WORD_AMOUNT = re.compile(
-    r"\b(a|an|one|two|three|four|five|six|seven|eight|nine|ten|\d[\d,]*(?:\.\d+)?)\s+"
-    r"(million|billion|trillion)\b",
-    re.IGNORECASE,
-)
-_SMALL_WORDS = {
-    "a": "1", "an": "1", "one": "1", "two": "2", "three": "3", "four": "4", "five": "5",
-    "six": "6", "seven": "7", "eight": "8", "nine": "9", "ten": "10",
-}  # fmt: skip
-
-
-def _numbers(text: str) -> set[str]:
-    found = {n.replace(",", "").rstrip(".") for n in _NUMBER.findall(text)}
-    for count, size in _WORD_AMOUNT.findall(text):
-        count = _SMALL_WORDS.get(count.lower(), count.replace(",", ""))
-        found.add(f"{count} {size.lower()}")
-    return found
-
-
-def numbers_to_check(text: str, known: str = "") -> list[str]:
-    """Sentences with a figure that isn't in `known` (the research and author facts).
-
-    A figure is a number in digits or a big amount in words ("a trillion dollars"). Vague words
-    like "thousands" or "a thousand" aren't figures, and hashtags and links are skipped.
-    """
-    known_numbers = _numbers(known)
-    found = []
-    for sentence in sentences(text):
-        bare = re.sub(r"https?://\S+|#\w+", "", sentence)
-        if _numbers(bare) - known_numbers:
-            found.append(sentence)
-    return found
-
-
-def describe_numbers(draft: str, known: str = "") -> str:
-    found = numbers_to_check(draft, known)
-    if not found:
-        return "None found."
-    lines = "\n".join(f'- "{s}"' for s in found)
-    return (
-        "These sentences have figures that aren't in the research or the author facts. A figure "
-        "presented as real (a statistic, or a number about a company, the industry or the "
-        "author) is a fact problem. A small detail inside a scenario clearly opened as made up "
-        '("Picture...", "Say...") is fine.\n' + lines
-    )
-
-
 def describe_checks(checks: LintResult | None) -> str:
     """What the deterministic lint found, so the editor doesn't count words or dashes itself."""
     if checks is None:
@@ -264,8 +215,6 @@ def edit_draft(
         today=brief.today.isoformat(),
         checks=describe_checks(checks),
         personal_claims=describe_personal_claims(draft),
-        numbers=describe_numbers(draft, f"{brief.research_notes}\n{brief.voice.author_facts}"),
-        research_dates=describe_dates(brief.research_notes, brief.today),
         humour_instruction=fragment("editor_humour" if humorous else "editor_straight"),
         min_words=config.min_words,
         max_words=config.max_words,

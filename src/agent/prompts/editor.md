@@ -35,16 +35,6 @@ yourself; the writer gets the code's results directly.
 
 $personal_claims
 
-## Numbers to check
-
-$numbers
-
-## Dates in the research, counted from today
-
-Weeks start on Monday. A post that says "last week" for something from earlier this week (or the
-other way round) has a fact problem.
-$research_dates
-
 ## What to do
 
 1. human_score: score the draft 1-10 on "sounds like a real person wrote it".
@@ -55,25 +45,23 @@ $research_dates
    wrong dates such as "last week" for something from yesterday). Start each item with the
    exact sentence in quotes, then say why. Before listing a sentence, check it against the
    author facts: the author's own $author_own_work is in there and is fine.
-   Check every sentence with "I", "we", "our" or "my": if what it says $author_first_name or their team did
-   isn't in the author facts, it's a made-up personal story. List it. That includes the
-   industry "we" ("We spent two years...", "we keep building..."): readers take it as the author's
-   own story. So does what the author has seen, watched or tested ("I've watched teams...", "most teams I
-   see", "I spent last month..."). First-person opinions ("I think...") are fine. A number
-   presented as real (a statistic, or a figure about a company, the industry or the author) must
-   come from the research or author facts; so must one in an example that isn't marked as made
-   up ("drops 2% of SKUs").
+   Check every sentence with "I", "we", "our" or "my": if what it says $author_first_name or
+   their team did isn't in the author facts, it's a made-up personal story. List it. That
+   includes the industry "we" ("We spent two years...", "we keep building..."): readers take it
+   as the author's own story. So does what the author has seen, watched or tested ("I've watched
+   teams...", "most teams I see", "I spent last month..."). First-person opinions ("I think...")
+   are fine. Hypothetical examples with specific numbers ("a $$10,000 refund", "2% of SKUs") read
+   as facts: list them.
    Not fact problems, so never list these: opinions and predictions ("I think...", "the hard
    part is..."), general truths about software or business ("a wrong order costs money"), the
    post's own topic or argument, reacting to the news or announcement the post is about ("I read
-   this and smiled", "I watched the launch roll out this week"), and scenarios opened as made up
-   ("Picture...", "Say...",
-   "Imagine..."), small details inside them included, and figures of speech like "a thousand
-   moving parts". Weak or generic lines like these belong in ai_sounding, not here.
+   this and smiled"), and scenarios opened as made up ("Picture...", "Say...", "Imagine...") as
+   long as they carry no specific numbers. Weak or generic lines like these belong in
+   ai_sounding, not here.
    rule_problems: only the rules code can't check: the humour hard limits (even in a straight
    post, for example a joke at the expense of interns or junior people), anything implying the
-   series is ending or numbering posts, and naming clients or brands from the author's work. The format
-   above was chosen on purpose, so don't flag it.
+   series is ending or numbering posts, and naming clients or brands from the author's work. The
+   format above was chosen on purpose, so don't flag it.
    Both lists hold problems only. If there are none, return an empty list. Never add notes that
    something is fine, allowed or correctly cited.
    These lists are what the writer fixes, so make them complete: anything you don't list stays.

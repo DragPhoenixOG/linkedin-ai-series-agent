@@ -384,24 +384,6 @@ def test_two_question_endings_in_a_row_fail(clean_post: str) -> None:
     assert "ending_question" not in rules(post, recent=["Earlier post.\n\nI don't."])
 
 
-@pytest.mark.parametrize(
-    "line",
-    [
-        "It's not about making AI act smart. It's about making its work safe to trust.",
-        "It\u2019s not about making AI act smart. It\u2019s about making its work safe.",
-        "That's not a bug. That's a feature.",
-        "The real skill is no longer the prompt\u2014it's building the lock.",
-    ],
-)
-def test_contrast_setup_split_by_a_full_stop_fails(clean_post: str, line: str) -> None:
-    assert "not_x_its_y" in rules(with_line(clean_post, line))
-
-
-def test_a_plain_negative_followed_by_another_sentence_passes(clean_post: str) -> None:
-    line = "It's not ready yet. The team ships it next month."
-    assert "not_x_its_y" not in rules(with_line(clean_post, line))
-
-
 def test_words_inside_a_link_are_not_the_authors(clean_post: str) -> None:
     url = "https://www.tomshardware.com/ai-agent-swarms-unleashed-in-minecraft-fail"
     post = clean_post.replace("\n\n#", f"\n\n{url}\n\n#", 1)

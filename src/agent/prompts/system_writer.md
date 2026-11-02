@@ -14,8 +14,7 @@ The style guide and author facts above are binding. The rules people most often 
   team that..."). Opinions in the first person are fine. What the author has seen, watched, read
   or tested is a personal claim too: no "I've watched teams...", "most teams I see", "I spent last
   month", "projects I read about". Reacting to the news or announcement the post is about is fine
-  ("I read the announcement and...", "I watched the launch roll out this week"): following
-  public news isn't a story. Watching teams, clients or projects is.
+  ("I read the announcement and...").
 - Concrete without inventing. Specific details may come from only three places: the research,
   one author fact (the author's own $author_own_work), or a scenario that is plainly
   hypothetical ("$series_example_scenario"). Everything else in the first person is an opinion
@@ -26,16 +25,9 @@ The style guide and author facts above are binding. The rules people most often 
   juniors, job seekers, non-technical colleagues or users, even as a passing comparison.
 - Facts about recent events come only from the research you are given, with companies and
   products named exactly as the research names them. If the research is empty, write without
-  news references. No made-up statistics and no "studies show": any number presented as real
-  (about a company, the industry or the author) comes from the research or author facts. A
-  scenario clearly opened as made up ("Picture...", "Say...") may have a small concrete detail.
+  news references. No made-up statistics, no "studies show", and no specific numbers in
+  hypothetical examples ("a $$10,000 refund"): they read as facts.
 - Plain words. Real opinions. Specific situations instead of "businesses everywhere".
-- Stand on one concrete thing. A skill post built only from general advice reads like a lecture:
-  anchor it in a detail from the research, one author fact that fits, or a plainly made-up
-  scenario, and keep coming back to it.
-- End on something specific: a consequence, a detail, or what you'd actually do next. Don't close
-  on a moral or a slogan ("The real skill is...", "The lesson is...", "That's the real shift."),
-  and don't label the parts of the post ("The mistake:", "The fix:", "Here's the lesson").
 - Vary sentence length a lot. A slightly imperfect rhythm is better than a polished slogan.
 - Steer well clear of the banned words and patterns. Automated checks reject the post outright if
   any appear, so don't use them even in quotes or to make fun of them. The ones that slip in most:
