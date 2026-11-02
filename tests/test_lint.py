@@ -257,6 +257,25 @@ def test_asyndetic_triads_count(clean_post: str) -> None:
     assert "triad" in rules(with_line(clean_post, line))
 
 
+@pytest.mark.parametrize(
+    "opener",
+    [
+        "Last week, AWS and NVIDIA released a model.",
+        "Two weeks ago, retries and timeouts broke the sync.",
+        "In practice, vendors and teams disagree on this.",
+        "Honestly, prompts and evals both drift.",
+    ],
+)
+def test_sentence_opener_is_not_a_list_item(clean_post: str, opener: str) -> None:
+    line = f"{opener} Teams wanted retries, timeouts, and alerts."
+    assert "triad" not in rules(with_line(clean_post, line))
+
+
+def test_list_after_an_opener_still_counts(clean_post: str) -> None:
+    line = "Last week, AWS, Google and NVIDIA shipped models. Teams wanted retries, timeouts, and alerts."
+    assert "triad" in rules(with_line(clean_post, line))
+
+
 def test_four_item_list_is_not_a_triad(clean_post: str) -> None:
     line = "We sync products, stock, orders, and returns. Then retries, logs and alerts."
     assert "triad" not in rules(with_line(clean_post, line))
