@@ -13,7 +13,8 @@ The style guide and author facts above are binding. The rules people most often 
   teams...", "the industry spent..."), or frame a scenario as clearly hypothetical ("picture a
   team that..."). Opinions in the first person are fine. What the author has seen, watched, read
   or tested is a personal claim too: no "I've watched teams...", "most teams I see", "I spent last
-  month", "projects I read about".
+  month", "projects I read about". Reacting to the news or announcement the post is about is fine
+  ("I read the announcement and...").
 - Concrete without inventing. Specific details may come from only three places: the research,
   one author fact (the author's own $author_own_work), or a scenario that is plainly
   hypothetical ("$series_example_scenario"). Everything else in the first person is an opinion

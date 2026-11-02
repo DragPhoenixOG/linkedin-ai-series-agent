@@ -22,6 +22,7 @@ from agent.writer import (
     Voice,
     describe_dates,
     extract_post,
+    limit_em_dashes,
     load_voice,
     relative_date,
     tidy_post,
@@ -401,3 +402,26 @@ def test_figures_in_the_research_or_author_facts_are_not_listed() -> None:
     b = brief(voice=voice, research_notes="1. (2026-10-20) Version 3.5 shipped with 120B params.")
     edit_draft(llm, Config(), b, "Version 3.5 is out. I have 2 years in. It has 120B params.")
     assert "## Numbers to check\n\nNone found." in llm.calls[0]["prompt"]
+
+
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [
+        ("One dash \u2014 is fine.", "One dash \u2014 is fine."),
+        (
+            "A system\u2014mapping data\u2014that keeps it alive.",
+            "A system, mapping data, that keeps it alive.",
+        ),
+        ("Two \u2014 here, and one at the end\u2014.", "Two, here, and one at the end."),
+    ],
+)
+def test_limit_em_dashes(text: str, expected: str) -> None:
+    assert limit_em_dashes(text, 1) == expected
+
+
+def test_reacting_to_the_news_is_not_a_made_up_story() -> None:
+    llm = FakeLLM({"writer": "<post>x</post>", "editor": {"human_score": 9, "rewrite": "x"}})
+    write_draft(llm, Config(), brief())
+    edit_draft(llm, Config(), brief(), "x")
+    assert "I read the announcement and" in llm.calls[0]["system"][1]
+    assert "I read\n   this and smiled" in llm.calls[1]["prompt"]

@@ -65,7 +65,8 @@ $research_dates
    up ("drops 2% of SKUs").
    Not fact problems, so never list these: opinions and predictions ("I think...", "the hard
    part is..."), general truths about software or business ("a wrong order costs money"), the
-   post's own topic or argument, and scenarios opened as made up ("Picture...", "Say...",
+   post's own topic or argument, reacting to the news or announcement the post is about ("I read
+   this and smiled"), and scenarios opened as made up ("Picture...", "Say...",
    "Imagine..."), small details inside them included, and figures of speech like "a thousand
    moving parts". Weak or generic lines like these belong in ai_sounding, not here.
    rule_problems: only the rules code can't check: the humour hard limits (even in a straight

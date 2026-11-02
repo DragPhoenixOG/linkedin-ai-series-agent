@@ -281,3 +281,12 @@ def test_rejected_api_key_is_not_swallowed() -> None:
     llm = FakeLLM({"news.scan": LLMAuthError("API key was rejected")})
     with pytest.raises(LLMAuthError):
         pick_story(llm, Config(), news_sources(), TODAY, History())
+
+
+def test_news_scan_keeps_each_event_separate() -> None:
+    from agent.templates import render
+
+    prompt = render(
+        "news_scan", today="2026-11-02", lookback_days=7, covered="(none)", headlines="[A1] x"
+    )
+    assert "Each candidate is one event" in prompt

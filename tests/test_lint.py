@@ -381,3 +381,10 @@ def test_contrast_setup_split_by_a_full_stop_fails(clean_post: str, line: str) -
 def test_a_plain_negative_followed_by_another_sentence_passes(clean_post: str) -> None:
     line = "It's not ready yet. The team ships it next month."
     assert "not_x_its_y" not in rules(with_line(clean_post, line))
+
+
+def test_words_inside_a_link_are_not_the_authors(clean_post: str) -> None:
+    url = "https://www.tomshardware.com/ai-agent-swarms-unleashed-in-minecraft-fail"
+    post = clean_post.replace("\n\n#", f"\n\n{url}\n\n#", 1)
+    assert "banned_phrase" not in rules(post)
+    assert "banned_phrase" in rules(with_line(clean_post, "We unleashed it on the warehouse."))
