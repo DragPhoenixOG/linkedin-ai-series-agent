@@ -10,6 +10,7 @@ from agent import templates
 from agent.series import load_series
 
 REPO = Path(__file__).resolve().parents[1]
+SEED_TOPICS = Path(__file__).parent / "fixtures" / "topics.yaml"
 
 # A post that passes every lint rule on its own. Tests append or swap lines to trip one rule.
 CLEAN_POST = """Last month a returns flow broke because two systems disagreed on what "cancelled" meant.

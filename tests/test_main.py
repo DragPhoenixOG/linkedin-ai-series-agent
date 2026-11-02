@@ -19,7 +19,7 @@ from agent.config import Config
 from agent.llm import AnthropicLLM, LLMError, OpenAICompatLLM
 from agent.main import EXIT_FAILED, EXIT_OK, EXIT_USAGE, Services, parse_args, run
 from agent.series import SeriesError
-from conftest import CLEAN_POST
+from conftest import CLEAN_POST, SEED_TOPICS
 from fakes import FakeClient, FakeLLM, FakeSources, article
 from test_news import HEADLINES, RULES_OFFICIAL, cand, verified
 
@@ -51,8 +51,13 @@ def root(tmp_path: Path) -> Path:
     config = yaml.safe_load((REPO / "config.yaml").read_text(encoding="utf-8"))
     config.update(TEST_SETTINGS)
     (tmp_path / "config.yaml").write_text(yaml.safe_dump(config, sort_keys=False), "utf-8")
-    for folder in ("content", "state", "posts"):
-        shutil.copytree(REPO / folder, tmp_path / folder)
+    # The live repo's state, archive and backlog change with every real run (a draft waiting for
+    # review, posts, topics marked posted). Tests start from a fresh state and the seed backlog.
+    shutil.copytree(REPO / "content", tmp_path / "content")
+    shutil.copy(SEED_TOPICS, tmp_path / "content" / "topics.yaml")
+    (tmp_path / "state").mkdir()
+    (tmp_path / "state" / "history.json").write_text('{\n  "posts": []\n}\n', "utf-8")
+    (tmp_path / "posts").mkdir()
     return tmp_path
 
 

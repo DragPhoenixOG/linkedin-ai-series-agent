@@ -22,6 +22,7 @@ from agent.topics import (
     propose_topics,
     save_topics,
 )
+from conftest import SEED_TOPICS
 from fakes import FakeLLM
 
 REPO = Path(__file__).resolve().parents[1]
@@ -32,7 +33,7 @@ def topic(i: int, status: str = "pending", title: str | None = None) -> Topic:
 
 
 def test_seed_backlog_loads_in_order() -> None:
-    topics = load_topics(REPO / "content" / "topics.yaml")
+    topics = load_topics(SEED_TOPICS)
     assert len(topics) == 9
     assert topics[0].id == "generative-to-agentic-ai"
     assert topics[-1].title == "From prototype to production"
@@ -42,7 +43,7 @@ def test_seed_backlog_loads_in_order() -> None:
 
 def test_save_and_reload_round_trip(tmp_path: Path) -> None:
     path = tmp_path / "topics.yaml"
-    shutil.copy(REPO / "content" / "topics.yaml", path)
+    shutil.copy(SEED_TOPICS, path)
     topics = load_topics(path)
     mark_posted(topics, "multi-agent-systems", date(2026, 10, 28), "https://linkedin.example/1")
     save_topics(topics, path)
@@ -50,6 +51,12 @@ def test_save_and_reload_round_trip(tmp_path: Path) -> None:
     assert reloaded == topics
     assert path.read_text().startswith("# Topic backlog")
     assert reloaded[1].posted_on == "2026-10-28"
+
+
+def test_live_backlog_loads() -> None:
+    """The real content/topics.yaml, in whatever state the agent has left it, still loads."""
+    topics = load_topics(REPO / "content" / "topics.yaml")
+    assert topics and len({t.id for t in topics}) == len(topics)
 
 
 def test_duplicate_ids_rejected(tmp_path: Path) -> None:
