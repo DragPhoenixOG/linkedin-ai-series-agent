@@ -11,7 +11,15 @@ from agent.config import Config
 from agent.editor import edit_draft, is_real_problem, parse_review, personal_claims
 from agent.llm import LLMError
 from agent.state import NewsStory, Source
-from agent.writer import PostBrief, Voice, extract_post, load_voice, tidy_post, write_draft
+from agent.writer import (
+    PostBrief,
+    Voice,
+    extract_post,
+    limit_em_dashes,
+    load_voice,
+    tidy_post,
+    write_draft,
+)
 from fakes import FakeLLM
 
 REPO = Path(__file__).resolve().parents[1]
@@ -328,3 +336,18 @@ def test_editor_is_asked_to_check_each_personal_claim() -> None:
     assert '- "I made an order yesterday."' in prompt and "author facts" in prompt
     edit_draft(llm, Config(), brief(), "Trust is the hard part.")
     assert "## Personal claims to check\n\nNone found." in llm.calls[1]["prompt"]
+
+
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [
+        ("One dash \u2014 is fine.", "One dash \u2014 is fine."),
+        (
+            "A system\u2014mapping data\u2014that keeps it alive.",
+            "A system, mapping data, that keeps it alive.",
+        ),
+        ("Two \u2014 here, and one at the end\u2014.", "Two, here, and one at the end."),
+    ],
+)
+def test_limit_em_dashes(text: str, expected: str) -> None:
+    assert limit_em_dashes(text, 1) == expected
