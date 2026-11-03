@@ -99,9 +99,11 @@ def build_feedback(attempt: Attempt) -> str:
     return "\n".join(f"- {item}" for item in items)
 
 
-# Sentence-fix rounds allowed on top of `max_attempts` full drafts, so a post that is one
-# sentence away from passing always gets its repair, even after the last full draft.
-MAX_FIX_ROUNDS = 2
+# Sentence-fix rounds allowed on top of `max_attempts` full drafts, so a post whose scores pass
+# but has a sentence or two to repair always gets that repair, even after the last full draft.
+# At most MAX_FIXES_PER_DRAFT in a row on one draft, so later drafts get their chance too.
+MAX_FIX_ROUNDS = 5
+MAX_FIXES_PER_DRAFT = 2
 
 
 def generate_post(llm: LLM, config: Config, brief: PostBrief) -> GenerationResult:
@@ -111,13 +113,13 @@ def generate_post(llm: LLM, config: Config, brief: PostBrief) -> GenerationResul
     feedback: str | None = None
     previous: str | None = None
     fixed: str | None = None
-    drafts = fixes = 0
+    drafts = fixes = streak = 0
     while True:
         if fixed:
-            text, fixes = fixed, fixes + 1
+            text, fixes, streak = fixed, fixes + 1, streak + 1
         else:
             text = write_draft(llm, config, brief, feedback=feedback, previous=previous)
-            drafts += 1
+            drafts, streak = drafts + 1, 0
         # Mechanical clean-up before anything is checked, so the checked text is the posted text.
         text = strip_reply_artifacts(limit_em_dashes(text, config.max_em_dashes))
         number = len(result.attempts) + 1
@@ -143,7 +145,8 @@ def generate_post(llm: LLM, config: Config, brief: PostBrief) -> GenerationResul
         feedback = build_feedback(attempt)
         previous = text
         fixed = None
-        if fixes < MAX_FIX_ROUNDS and only_sentence_problems(attempt, brief, config):
+        can_fix = fixes < MAX_FIX_ROUNDS and streak < MAX_FIXES_PER_DRAFT
+        if can_fix and only_sentence_problems(attempt, brief, config):
             # Scores already pass: change just the flagged sentences rather than redraft, so the
             # rest of a nearly-there post can't pick up new problems.
             fixed = fix_sentences(llm, config, brief, text, sentence_problems(attempt))
