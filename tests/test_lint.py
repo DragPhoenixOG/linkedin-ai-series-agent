@@ -257,6 +257,25 @@ def test_asyndetic_triads_count(clean_post: str) -> None:
     assert "triad" in rules(with_line(clean_post, line))
 
 
+@pytest.mark.parametrize(
+    "opener",
+    [
+        "Last week, AWS and NVIDIA released a model.",
+        "Two weeks ago, retries and timeouts broke the sync.",
+        "In practice, vendors and teams disagree on this.",
+        "Honestly, prompts and evals both drift.",
+    ],
+)
+def test_sentence_opener_is_not_a_list_item(clean_post: str, opener: str) -> None:
+    line = f"{opener} Teams wanted retries, timeouts, and alerts."
+    assert "triad" not in rules(with_line(clean_post, line))
+
+
+def test_list_after_an_opener_still_counts(clean_post: str) -> None:
+    line = "Last week, AWS, Google and NVIDIA shipped models. Teams wanted retries, timeouts, and alerts."
+    assert "triad" in rules(with_line(clean_post, line))
+
+
 def test_four_item_list_is_not_a_triad(clean_post: str) -> None:
     line = "We sync products, stock, orders, and returns. Then retries, logs and alerts."
     assert "triad" not in rules(with_line(clean_post, line))
@@ -363,3 +382,10 @@ def test_two_question_endings_in_a_row_fail(clean_post: str) -> None:
     post = with_line(clean_post, "Would you let it touch refunds?")
     assert "ending_question" in rules(post, recent=["Earlier post.\n\nDo you agree with me here?"])
     assert "ending_question" not in rules(post, recent=["Earlier post.\n\nI don't."])
+
+
+def test_words_inside_a_link_are_not_the_authors(clean_post: str) -> None:
+    url = "https://www.tomshardware.com/ai-agent-swarms-unleashed-in-minecraft-fail"
+    post = clean_post.replace("\n\n#", f"\n\n{url}\n\n#", 1)
+    assert "banned_phrase" not in rules(post)
+    assert "banned_phrase" in rules(with_line(clean_post, "We unleashed it on the warehouse."))

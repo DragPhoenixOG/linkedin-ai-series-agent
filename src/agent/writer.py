@@ -127,6 +127,18 @@ def tidy_post(text: str) -> str:
     return "\n".join(out).strip()
 
 
+def limit_em_dashes(text: str, maximum: int) -> str:
+    """If a post has more em dashes than allowed, turn them all into commas.
+
+    Swapping a dash for a comma is mechanical, so code does it rather than spending a model
+    round on it. Runs before lint and the editor, so the text they check is the text posted.
+    """
+    if text.count("\u2014") <= maximum:
+        return text
+    text = re.sub(r"[ \t]*\u2014[ \t]*", ", ", text)
+    return re.sub(r",\s*([,.;:!?])", r"\1", text)
+
+
 # What a model sometimes wraps around the post itself. A preamble is a short opening paragraph
 # that announces the post ("Here is a ... reaction ... LinkedIn will love", "Here's the revised
 # draft:"); an ordinary opener such as "Here is what surprised me about the AWS post." stays.

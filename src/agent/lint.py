@@ -258,6 +258,34 @@ _TRIAD_RE = [
     re.compile(rf"(?<!, )(?<![\w,])(?:{_SHORT}),\s+(?:{_SHORT}),\s+(?:{_SHORT})(?=\s*[.!?]|\s*$)"),
 ]
 
+# A sentence opener set off by a comma ("Last week,", "Honestly,", "In practice,") isn't a list
+# item: "Last week, AWS and NVIDIA released a model" has two items, not three.
+_INTRO_RE = re.compile(
+    r"^\s*(?:(?:and|but|so|then)\s+)?"
+    r"(?:(?:last|this|next|that|same|every|earlier|later)\s+"
+    r"(?:week|month|year|quarter|time|day|morning|afternoon|evening|night|sprint|release)"
+    r"|(?:[\w-]+\s+){1,3}ago"
+    r"|(?:in|on|at|by|for|after|before|since|during|over|until|within|from)(?:\s+[\w'-]+){1,3}"
+    r"|yesterday|today|tonight|tomorrow|recently|lately|meanwhile|still|now|then|again|instead"
+    r"|otherwise|also|plus|anyway|sure|yes|no|okay|ok|well|so|but|and|honestly|frankly|finally"
+    r"|basically|technically|clearly|sadly|luckily|ironically|apparently|obviously|eventually"
+    r"|usually|personally|realistically|practically|fortunately|unfortunately|surprisingly"
+    r"|interestingly|admittedly|naturally|first|second|third)"
+    r",\s*",
+    re.IGNORECASE,
+)
+
+
+def _without_intro(sentence: str) -> str:
+    """The sentence minus up to two comma-separated openers ("Last week, honestly, ...")."""
+    for _ in range(2):
+        match = _INTRO_RE.match(sentence)
+        if not match:
+            break
+        sentence = sentence[match.end() :]
+    return sentence
+
+
 _FORMATTING_RE = [
     ("bold markdown (**text**)", re.compile(r"\*\*[^*\n]+\*\*")),
     ("bold markdown (__text__)", re.compile(r"__[^_\n]+__")),
@@ -408,7 +436,7 @@ def _check_hashtags(text: str, limits: LintLimits) -> list[LintIssue]:
 
 def _check_triads(text: str) -> list[LintIssue]:
     found: list[str] = []
-    for sentence in sentences(text):
+    for sentence in map(_without_intro, sentences(text)):
         spans: list[tuple[int, int]] = []
         for pattern in _TRIAD_RE:
             for m in pattern.finditer(sentence):
@@ -510,10 +538,11 @@ def lint_post(
     limits = limits or LintLimits()
     norm = normalize(text)
     recent = [normalize(t) for t in recent_texts]
+    prose = _URL_RE.sub(" ", norm)  # a link's words aren't the author's ("...-unleashed-in-...")
     words, issues = _check_length(norm, limits)
-    issues += _check_banned(norm)
-    issues += _check_em_dashes(norm, limits)
-    issues += _check_not_x_its_y(norm)
+    issues += _check_banned(prose)
+    issues += _check_em_dashes(prose, limits)
+    issues += _check_not_x_its_y(prose)
     issues += _check_sentence_starts(norm)
     issues += _check_emoji(norm, limits)
     issues += _check_hashtags(norm, limits)

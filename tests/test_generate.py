@@ -267,6 +267,16 @@ def test_a_slightly_short_post_gets_a_sentence_fix_not_a_redraft() -> None:
     assert "writer.fix" in [c["label"] for c in llm.calls]
 
 
+def test_extra_em_dashes_become_commas_before_anything_is_checked() -> None:
+    first = CLEAN_POST.splitlines()[0]
+    dashed = CLEAN_POST.replace(first, first.rstrip(".") + " \u2014 twice \u2014 really.", 1)
+    llm = FakeLLM({"writer": f"<post>{dashed}</post>", "editor": review(9, "")})
+    result = generate_post(llm, Config(), brief())
+    assert result.success
+    assert "\u2014" not in result.best.text and ", twice, really." in result.best.text
+    assert "\u2014" not in llm.calls[1]["prompt"].split("<draft>")[1]  # the editor saw commas
+
+
 def test_model_artifacts_are_removed_before_anything_is_checked() -> None:
     wrapped = f"Here's the post for LinkedIn:\n\n{CLEAN_POST.replace('boring', '*boring*', 1)}"
     llm = FakeLLM({"writer": f"<post>{wrapped}</post>", "editor": review(9, "")})
