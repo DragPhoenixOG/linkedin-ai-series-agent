@@ -31,7 +31,7 @@ Every day at 03:30 UTC (9:00 AM IST) a GitHub Actions run:
    model that scores it, and a list of every sentence where the author claims to have done or
    seen something, which the editor must check against the author facts. If the scores pass but
    a few sentences break a rule, only those sentences are rewritten. Otherwise the writer
-   redrafts with the feedback: up to 5 full drafts, plus up to 2 sentence-fix rounds.
+   redrafts with the feedback: up to 5 full drafts, plus up to 5 sentence-fix rounds.
 6. Posts only text that the editor scored and lint passed. By default it first emails you the
    draft as a GitHub issue and publishes it on the next day's run, unless you reject it.
 7. Publishes through the LinkedIn Posts API, commits the updated history back to the repo, and
@@ -408,7 +408,7 @@ fully automatic posting once you trust the posts.
 ## Costs
 
 - **Model, open models on Bedrock (current):** a posting day makes roughly 5 to 25 model calls
-  (research or news scan and verification, then up to 5 drafts and 2 sentence fixes, each
+  (research or news scan and verification, then up to 5 drafts and 5 sentence fixes, each
   reviewed by the editor), about 15-65 thousand input tokens and a few thousand output tokens.
   DeepSeek V3.2 is listed at about $0.62 per million input tokens and $1.85 per million output
   tokens; check the Bedrock pricing page for Kimi K2.5 and Mistral Large 3. At these volumes
@@ -501,12 +501,13 @@ original brief in `CLAUDE.md`, that's noted and was agreed.
   invented stories and wrong facts into it. The editor still returns a rewrite (kept for
   reference), but the writer fixes the flagged problems, and only a version the editor scored
   and lint passed can be posted.
-- **Up to 5 drafts plus 2 sentence fixes (change from the brief).** The brief allows 3 rounds.
+- **Up to 5 drafts plus 5 sentence fixes (change from the brief).** The brief allows 3 rounds.
   With open models, posts often came within one round of passing, so `max_attempts` is 5. On
   top of that, when a draft's scores pass but a few sentences break a rule (banned phrase,
   contrast setup, em dashes, repeated starts, lists of three, length, an unsupported claim),
   the writer returns find-and-replace edits for just those sentences, code applies them, and the
-  result is scored and linted again, up to 2 times. A post that still fails isn't published.
+  result is scored and linted again: up to 2 times in a row on one draft and 5 per run. A post
+  that still fails isn't published.
 - **The editor sees code's results.** Lint runs before the editor, and the editor gets the exact
   word count and issues, today's date, and the list of first-person experience sentences to
   check. The editor's notes that only say something is fine ("no factual problems found") are
