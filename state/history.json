@@ -1,3 +1,39 @@
 {
-  "posts": []
+  "posts": [],
+  "pending": {
+    "record": {
+      "date": "2026-11-03",
+      "post_type": "skill",
+      "tone": "humorous",
+      "format": "dry_take",
+      "text": "The industry spent two years making models talk. Now it's trying to stop them from ordering ten thousand laptops because someone said \"make the procurement run smoother.\"\n\nAWS just published blueprints for agentic platforms and an aerospace engineering assistant. The fine print is more interesting than the demos. Agents plan. Agents supervise. But when a part substitution might ground a fleet, an actual human engineer still makes the call. The LLM assembles evidence. Deterministic code scores tolerances. Nothing ships to production on vibe.\n\nI find this strangely comforting. The industry finally admitted that \"agentic\" doesn't mean \"unattended.\" It means \"more moving parts with higher stakes.\"\n\nThe skill everyone's actually building now isn't prompt engineering. It'sOps under uncertainty: guardrails, rate limits, budgets, and the ability to roll back when your returns agent starts interpreting \"generous policy\" as \"refund everything.\"\n\nI work on order flows and returns integrations. The scariest failures are the transactions that look fine in logs and cost you money for three weeks, not the crashes. Agents scale that risk beautifully. Suddenly \"observability\" means tracking not just what ran, but what the system decided and why.\n\nThe hype says agents will do the work. The blueprints say they'll do the work inside a perimeter you defined, with a supervisor you trust, and an audit trail for when they don't.\n\nThat's less exciting. It's also the only way this works in production.\n\n#AI #AgenticAI #EnterpriseTech",
+      "slug": "from-generative-ai-to-agentic-ai",
+      "topic_id": "generative-to-agentic-ai",
+      "topic_title": "From Generative AI to Agentic AI",
+      "news_story": null,
+      "sources": [
+        {
+          "url": "https://aws.amazon.com/blogs/machine-learning/building-an-agentic-ai-platform-on-amazon-bedrock-agentcore/",
+          "title": "Building an Agentic AI Platform on Amazon Bedrock AgentCore",
+          "publisher": "AWS Machine Learning Blog",
+          "official": true
+        },
+        {
+          "url": "https://aws.amazon.com/blogs/machine-learning/agentic-engineering-intelligence-with-amazon-nova-multimodal-embeddings-and-amazon-bedrock-agentcore/",
+          "title": "Agentic engineering intelligence with Amazon Nova Multimodal Embeddings and Amazon Bedrock AgentCore",
+          "publisher": "AWS Machine Learning Blog",
+          "official": true
+        }
+      ],
+      "editor_score": 8,
+      "humour_score": 7,
+      "attempts": 2,
+      "urn": null,
+      "linkedin_url": null
+    },
+    "created_at": "2026-11-03T11:07:16.090930+00:00",
+    "publish_after": "2026-11-04T07:07:16.090930+00:00",
+    "issue_number": 38,
+    "research_notes": "1. (2026-10-28) A new AWS architectural blueprint for an 'enterprise Agentic AI Platform' was published, built on Amazon Bedrock AgentCore. It provides governed model and tool access, delegated delivery for teams, and lifecycle controls.\n   Why it matters: It addresses core trust and reliability challenges for deploying agentic AI at scale, giving platform teams a governed framework to manage risk.\n   Details stated in the articles:\n   - The blueprint is called the 'Enterprise Agentic AI Platform Blueprint' and is built on Amazon Bedrock AgentCore.\n   - It enforces rules so agents can only use approved models through a gateway with guardrails, rate limits, and budgets.\n   - It ensures agents can only discover and invoke approved tools through an authenticated Model Context Protocol (MCP) gateway.\n   - It provides a repeatable deployment pattern so Workstream teams can ship and roll back independently within pre-approved boundaries.\n   Sources: AWS Machine Learning Blog <https://aws.amazon.com/blogs/machine-learning/building-an-agentic-ai-platform-on-amazon-bedrock-agentcore/>\n2. (2026-11-02) AWS detailed a multi-agent engineering assistant built on Amazon Bedrock AgentCore and Amazon Nova Multimodal Embeddings for high-stakes tasks like aerospace part substitution.\n   Why it matters: It demonstrates a real-world, high-consequence use case where trust is enforced by keeping the human in the loop and using deterministic code for critical checks.\n   Details stated in the articles:\n   - The system is a multi-agent assistant that helps engineers evaluate part substitutions by cross-referencing specifications.\n   - It uses a planner (Claude Haiku), specialist agents (Claude Sonnet), and a supervisor (Claude Opus) orchestrated on Amazon Bedrock AgentCore.\n   - A core design rule is that 'the engineer makes every decision and the system assembles the evidence for it'.\n   - Deterministic Python code, not an LLM, scores candidate parts against tolerance rules to produce pass/flag verdicts for formal review.\n   Sources: AWS Machine Learning Blog <https://aws.amazon.com/blogs/machine-learning/agentic-engineering-intelligence-with-amazon-nova-multimodal-embeddings-and-amazon-bedrock-agentcore/>"
+  }
 }
