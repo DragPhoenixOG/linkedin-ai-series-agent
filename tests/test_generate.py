@@ -265,3 +265,11 @@ def test_a_slightly_short_post_gets_a_sentence_fix_not_a_redraft() -> None:
     assert any("length" in p for p in result.attempts[0].problems)
     assert [c["label"] for c in llm.calls].count("writer") == 1
     assert "writer.fix" in [c["label"] for c in llm.calls]
+
+
+def test_model_artifacts_are_removed_before_anything_is_checked() -> None:
+    wrapped = f"Here's the post for LinkedIn:\n\n{CLEAN_POST.replace('boring', '*boring*', 1)}"
+    llm = FakeLLM({"writer": f"<post>{wrapped}</post>", "editor": review(9, "")})
+    result = generate_post(llm, Config(), brief())
+    assert result.success and result.best.text == CLEAN_POST
+    assert "Here's the post" not in llm.calls[1]["prompt"]  # the editor saw the cleaned text

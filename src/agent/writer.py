@@ -127,6 +127,51 @@ def tidy_post(text: str) -> str:
     return "\n".join(out).strip()
 
 
+# What a model sometimes wraps around the post itself. A preamble is a short opening paragraph
+# that announces the post ("Here is a ... reaction ... LinkedIn will love", "Here's the revised
+# draft:"); an ordinary opener such as "Here is what surprised me about the AWS post." stays.
+_PREAMBLE_START = re.compile(
+    r"^(?:here(?:'s|’s| is| are)|sure\b|certainly\b|okay\b|absolutely\b|below is)",
+    re.IGNORECASE,
+)
+_PREAMBLE_SIGN = re.compile(
+    r":\s*$|\blinkedin\b|\bas requested\b|\b(?:draft|version|rewrite|revised)\b", re.IGNORECASE
+)
+_SIGN_OFF = re.compile(
+    r"^(?:let me know\b|i hope this\b|hope this\b|feel free to\b)", re.IGNORECASE
+)
+# Markdown emphasis: LinkedIn shows the asterisks as they are. A bullet ("* item") or a sum
+# ("5 * 3") isn't emphasis and stays.
+_EMPHASIS = [
+    re.compile(r"\*\*(?=\S)([^*\n]+?)(?<=\S)\*\*"),
+    re.compile(r"(?<![\w*])\*(?=\S)([^*\n]+?)(?<=\S)\*(?![\w*])"),
+]
+
+
+def strip_reply_artifacts(text: str) -> str:
+    """Remove a model's preamble, sign-off and markdown emphasis from a post.
+
+    Mechanical clean-up, like `limit_em_dashes`: it runs before lint and the editor, so the text
+    they check is the text posted.
+    """
+    paragraphs = tidy_post(text).split("\n\n")
+    first = paragraphs[0]
+    if (
+        len(paragraphs) > 1
+        and len(first.split()) <= 40
+        and _PREAMBLE_START.match(first)
+        and _PREAMBLE_SIGN.search(first)
+    ):
+        paragraphs = paragraphs[1:]
+    paragraphs = [
+        p for i, p in enumerate(paragraphs) if not (i >= len(paragraphs) - 2 and _SIGN_OFF.match(p))
+    ]
+    cleaned = "\n\n".join(paragraphs)
+    for pattern in _EMPHASIS:
+        cleaned = pattern.sub(r"\1", cleaned)
+    return tidy_post(cleaned)
+
+
 def extract_post(text: str) -> str:
     """Pull the post out of `<post>` tags (or use the whole reply if the tags are missing)."""
     match = re.search(r"<post>\s*(.*?)\s*</post>", text, re.DOTALL)
