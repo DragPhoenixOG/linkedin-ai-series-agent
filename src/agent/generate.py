@@ -102,7 +102,7 @@ def build_feedback(attempt: Attempt) -> str:
 # Sentence-fix rounds allowed on top of `max_attempts` full drafts, so a post whose scores pass
 # but has a sentence or two to repair always gets that repair, even after the last full draft.
 # At most MAX_FIXES_PER_DRAFT in a row on one draft, so later drafts get their chance too.
-MAX_FIX_ROUNDS = 3
+MAX_FIX_ROUNDS = 5
 MAX_FIXES_PER_DRAFT = 2
 
 

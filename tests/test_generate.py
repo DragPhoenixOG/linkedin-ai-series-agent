@@ -245,9 +245,21 @@ def test_fix_rounds_are_capped() -> None:
         for c in llm.calls
         if "writer" in c["label"]
     ]
-    # At most 2 fixes in a row on one draft, 3 in all, then the remaining full drafts.
-    assert kinds == ["draft", "fix", "fix", "draft", "fix", "draft", "draft", "draft"]
-    assert len(result.attempts) == 5 + 3
+    # At most 2 fixes in a row on one draft, 5 in all, then the remaining full drafts.
+    kinds_expected = [
+        "draft",
+        "fix",
+        "fix",
+        "draft",
+        "fix",
+        "fix",
+        "draft",
+        "fix",
+        "draft",
+        "draft",
+    ]
+    assert kinds == kinds_expected
+    assert len(result.attempts) == 5 + 5
 
 
 def test_a_slightly_short_post_gets_a_sentence_fix_not_a_redraft() -> None:

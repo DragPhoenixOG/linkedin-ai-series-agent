@@ -25,12 +25,13 @@ Every day at 03:30 UTC (9:00 AM IST) a GitHub Actions run:
    search): 1-2 recent developments for a skill topic, or one news story from the last 7 days.
    It fetches the articles, and the model works only from their text: a short summary plus up to
    4 specific details per article, each cited by id. News needs 2 independent sources or 1
-   official one, and every key fact is checked against the article text.
+   official one, and every key fact is checked against the article text. A "story" built from
+   several different articles on one site is dropped: those are separate stories merged together.
 5. Writes the post and checks it three ways: deterministic lint, a separate "blunt editor"
    model that scores it, and a list of every sentence where the author claims to have done or
    seen something, which the editor must check against the author facts. If the scores pass but
    a few sentences break a rule, only those sentences are rewritten. Otherwise the writer
-   redrafts with the feedback: up to 5 full drafts, plus up to 3 sentence-fix rounds.
+   redrafts with the feedback: up to 5 full drafts, plus up to 5 sentence-fix rounds.
 6. Posts only text that the editor scored and lint passed. By default it first emails you the
    draft as a GitHub issue and publishes it on the next day's run, unless you reject it.
 7. Publishes through the LinkedIn Posts API, commits the updated history back to the repo, and
@@ -465,7 +466,7 @@ from this series leaks into it.
 ## Costs
 
 - **Model, open models on Bedrock (current):** a posting day makes roughly 5 to 25 model calls
-  (research or news scan and verification, then up to 5 drafts and 3 sentence fixes, each
+  (research or news scan and verification, then up to 5 drafts and 5 sentence fixes, each
   reviewed by the editor), about 15-65 thousand input tokens and a few thousand output tokens.
   DeepSeek V3.2 is listed at about $0.62 per million input tokens and $1.85 per million output
   tokens; check the Bedrock pricing page for Kimi K2.5 and Mistral Large 3. At these volumes
@@ -559,12 +560,12 @@ original brief in `CLAUDE.md`, that's noted and was agreed.
   invented stories and wrong facts into it. The editor still returns a rewrite (kept for
   reference), but the writer fixes the flagged problems, and only a version the editor scored
   and lint passed can be posted.
-- **Up to 5 drafts plus 3 sentence fixes (change from the brief).** The brief allows 3 rounds.
+- **Up to 5 drafts plus 5 sentence fixes (change from the brief).** The brief allows 3 rounds.
   With open models, posts often came within one round of passing, so `max_attempts` is 5. On
   top of that, when a draft's scores pass but a few sentences break a rule (banned phrase,
   contrast setup, em dashes, repeated starts, lists of three, length, an unsupported claim),
   the writer returns find-and-replace edits for just those sentences, code applies them, and the
-  result is scored and linted again: up to 2 times on one draft and 3 per run. A post that still
+  result is scored and linted again: up to 2 times on one draft and 5 per run. A post that still
   fails isn't published. Fixing the AI-sounding sentences of a draft one point short of the bar
   was tried and dropped: the editor just flagged other sentences and the score never rose.
 - **The series is configurable.** Who writes it and what it covers were written into the prompts;
