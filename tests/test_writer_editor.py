@@ -11,7 +11,15 @@ from agent.config import Config
 from agent.editor import edit_draft, is_real_problem, parse_review, personal_claims
 from agent.llm import LLMError
 from agent.state import NewsStory, Source
-from agent.writer import PostBrief, Voice, extract_post, load_voice, tidy_post, write_draft
+from agent.writer import (
+    PostBrief,
+    Voice,
+    extract_post,
+    load_voice,
+    strip_reply_artifacts,
+    tidy_post,
+    write_draft,
+)
 from fakes import FakeLLM
 
 REPO = Path(__file__).resolve().parents[1]
@@ -328,3 +336,41 @@ def test_editor_is_asked_to_check_each_personal_claim() -> None:
     assert '- "I made an order yesterday."' in prompt and "author facts" in prompt
     edit_draft(llm, Config(), brief(), "Trust is the hard part.")
     assert "## Personal claims to check\n\nNone found." in llm.calls[1]["prompt"]
+
+
+RUN_7_PREAMBLE = (
+    "Here is a 100% human, non-robotic engineer's reaction to a piece of news, presented in a "
+    "style that LinkedIn will love and find valuable."
+)
+
+
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [
+        (
+            f"{RUN_7_PREAMBLE}\n\nAn engineering blog post from AWS.\n\n#AI",
+            "An engineering blog post from AWS.\n\n#AI",
+        ),
+        ("Sure! Here's the revised draft:\n\nThe real post.\n\n#AI", "The real post.\n\n#AI"),
+        ("The post.\n\nLet me know if you want changes.\n\n#AI", "The post.\n\n#AI"),
+        (
+            "Getting an LLM to *describe* a workflow is easy. Doing **it** is not.\n\n#AI",
+            "Getting an LLM to describe a workflow is easy. Doing it is not.\n\n#AI",
+        ),
+    ],
+)
+def test_model_artifacts_are_stripped(text: str, expected: str) -> None:
+    assert strip_reply_artifacts(text) == expected
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "Here is what surprised me about the AWS post.\n\nMore text.\n\n#AI",
+        "Five * three * two is thirty.\n\n#AI",
+        "Two things:\n\n* the queue\n* the retries\n\n#AI",
+        "One line only, here's the draft:",
+    ],
+)
+def test_ordinary_text_is_left_alone(text: str) -> None:
+    assert strip_reply_artifacts(text) == text

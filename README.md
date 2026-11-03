@@ -113,6 +113,9 @@ the research sources live in `content/feeds.yaml`.
   are replaced, and code splices them in, so the rest of the post can't pick up new problems.
 - **Only checked text is posted.** The post that goes out is always the exact text the editor
   scored and lint passed.
+- **Model wrapping is stripped.** Before anything is checked, code removes what a model sometimes
+  adds around a post: an opening line announcing it ("Here is a ... post LinkedIn will love"), a
+  "Let me know..." sign-off, and markdown `*emphasis*`, which LinkedIn shows as literal asterisks.
 
 ## Setup
 
