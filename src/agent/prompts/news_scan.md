@@ -9,6 +9,8 @@ commerce/retail tech meeting AI.
 
 Rules:
 - Use only what the headlines and summaries say. Nothing from memory.
+- Each candidate is one event. Never combine separate events into one candidate, even when they
+  make a neat pair: each one has to stand on its own sources.
 - Several headlines may cover the same story: list all their ids together in headline_ids.
   A story needs either 2 headlines from different sites, or 1 marked "official".
 - Mark rumours, leaks, "reportedly" stories and speculation as "confirmed": false.
