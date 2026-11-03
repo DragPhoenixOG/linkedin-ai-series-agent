@@ -117,6 +117,22 @@ def has_enough_sources(sources: list[Source]) -> bool:
     return any(s.official for s in sources) or len({domain_of(s.url) for s in sources}) >= 2
 
 
+def is_bundle(sources: list[Source]) -> bool:
+    """True if two different articles come from the same site.
+
+    One news event is reported once per outlet. Several articles from one site (three separate
+    posts on the same company blog, say) mean the scan has merged separate stories into one, and
+    the post would end up linking an article it isn't about.
+    """
+    seen: dict[str, str] = {}
+    for s in sources:
+        url, domain = s.url.rstrip("/"), domain_of(s.url)
+        if domain in seen and seen[domain] != url:
+            return True
+        seen[domain] = url
+    return False
+
+
 def is_already_covered(candidate: NewsCandidate, stories: list[NewsStory]) -> bool:
     """True if this looks like a story we have already posted about (at any time)."""
     urls = {s.url.rstrip("/") for s in candidate.sources}
@@ -155,6 +171,8 @@ def rank_candidates(
             reason = "unconfirmed"
         elif not has_enough_sources(c.sources):
             reason = "not enough sources"
+        elif is_bundle(c.sources):
+            reason = "several articles from one site (separate stories)"
         elif is_already_covered(c, covered):
             reason = "already covered"
         else:

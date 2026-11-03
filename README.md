@@ -25,7 +25,8 @@ Every day at 03:30 UTC (9:00 AM IST) a GitHub Actions run:
    search): 1-2 recent developments for a skill topic, or one news story from the last 7 days.
    It fetches the articles, and the model works only from their text: a short summary plus up to
    4 specific details per article, each cited by id. News needs 2 independent sources or 1
-   official one, and every key fact is checked against the article text.
+   official one, and every key fact is checked against the article text. A "story" built from
+   several different articles on one site is dropped: those are separate stories merged together.
 5. Writes the post and checks it three ways: deterministic lint, a separate "blunt editor"
    model that scores it, and a list of every sentence where the author claims to have done or
    seen something, which the editor must check against the author facts. If the scores pass but
