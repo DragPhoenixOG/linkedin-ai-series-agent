@@ -117,6 +117,9 @@ personal facts the agent may use in `content/author.md`, and the research source
   are replaced, and code splices them in, so the rest of the post can't pick up new problems.
 - **Only checked text is posted.** The post that goes out is always the exact text the editor
   scored and lint passed.
+- **Model wrapping is stripped.** Before anything is checked, code removes what a model sometimes
+  adds around a post: an opening line announcing it ("Here is a ... post LinkedIn will love"), a
+  "Let me know..." sign-off, and markdown `*emphasis*`, which LinkedIn shows as literal asterisks.
 
 ## Setup
 
@@ -169,14 +172,15 @@ combination in testing. Other providers are a config change away.
 
 What we learned picking models: the writer must reliably follow "never write X" rules, and the
 editor must be strict about facts but not invent problems. As writer, DeepSeek V3.2 kept ending
-posts on slogan lines and stalled at 7/10 on straight posts. Kimi K2.5 uses the research details
-more concretely: on 2 Nov 2026 it passed 4 of 5 dry runs (all four kinds of post) against 1 of 4
-for DeepSeek. It also takes more liberties, such as invented "I've watched teams..." moments
-and edgier jokes; the editor catches most, and the review window covers the rest. DeepSeek V3.2
-as editor got word counts wrong and missed invented stories; Kimi K2 Thinking spent its whole
-output budget thinking before it reviewed anything. Mistral Large 3 was the most accurate
-editor. A different model as editor than as writer also avoids a model going easy on its own
-text. To compare writers yourself, use the **writer_model** run option (step 6).
+posts on slogan lines and stalled at 7/10 on straight posts: in dry runs on 2-3 Nov 2026 it
+passed 4 of 8, and none of the 4 straight posts. Kimi K2.5 passed 6 of 8 in the same runs and
+uses the research details more concretely. It also takes more liberties, such as invented
+"I've watched teams..." moments; the editor catches most, and the review window covers the
+rest. DeepSeek V3.2 as editor got word counts wrong and missed invented stories; Kimi K2
+Thinking spent its whole output budget thinking before it reviewed anything. Mistral Large 3
+was the most accurate editor. A different model as editor than as writer also avoids a model
+going easy on its own text. To compare
+writers yourself, use the **writer_model** run option (step 6).
 
 #### Claude (direct, or on Bedrock)
 
@@ -565,9 +569,10 @@ original brief in `CLAUDE.md`, that's noted and was agreed.
   top of that, when a draft's scores pass but a few sentences break a rule (banned phrase,
   contrast setup, em dashes, repeated starts, lists of three, length, an unsupported claim),
   the writer returns find-and-replace edits for just those sentences, code applies them, and the
-  result is scored and linted again: up to 2 times on one draft and 5 per run. A post that still
-  fails isn't published. Fixing the AI-sounding sentences of a draft one point short of the bar
-  was tried and dropped: the editor just flagged other sentences and the score never rose.
+  result is scored and linted again: up to 2 times in a row on one draft and 5 per run. A post
+  that still fails isn't published. Fixing the AI-sounding sentences of a draft one point short
+  of the bar was tried and dropped: the editor just flagged other sentences and the score never
+  rose.
 - **The series is configurable.** Who writes it and what it covers were written into the prompts;
   they now come from `content/series.yaml`, so the agent can run anyone's series. With this
   series' values the prompts read as before, except that "he" and "his" became the author's name

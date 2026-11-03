@@ -240,25 +240,10 @@ def test_fix_rounds_are_capped() -> None:
     )
     result = generate_post(llm, Config(), brief())
     assert not result.success
-    kinds = [
-        "fix" if c["label"] == "writer.fix" else "draft"
-        for c in llm.calls
-        if "writer" in c["label"]
-    ]
+    labels = [c["label"] for c in llm.calls if c["label"].startswith("writer")]
+    kinds = ["fix" if label == "writer.fix" else "draft" for label in labels]
     # At most 2 fixes in a row on one draft, 5 in all, then the remaining full drafts.
-    kinds_expected = [
-        "draft",
-        "fix",
-        "fix",
-        "draft",
-        "fix",
-        "fix",
-        "draft",
-        "fix",
-        "draft",
-        "draft",
-    ]
-    assert kinds == kinds_expected
+    assert kinds == ["draft", "fix", "fix", "draft", "fix", "fix", "draft", "fix", "draft", "draft"]
     assert len(result.attempts) == 5 + 5
 
 
@@ -310,7 +295,7 @@ def test_a_one_point_miss_gets_a_full_redraft_not_a_sentence_fix() -> None:
     assert [c["label"] for c in llm.calls].count("writer") == 2
 
 
-def test_the_fix_prompt_knows_the_word_count() -> None:
+def test_the_fix_prompt_knows_the_word_count_and_keeps_meaning() -> None:
     bad_sentence = next(line for line in BAD_POST.splitlines() if "robust" in line)
     good_sentence = bad_sentence.replace("robust engineering", "boring engineering")
     llm = FakeLLM(
@@ -324,6 +309,7 @@ def test_the_fix_prompt_knows_the_word_count() -> None:
     fix_prompt = next(c["prompt"] for c in llm.calls if c["label"] == "writer.fix")
     words = lint_post(BAD_POST, LintLimits.from_config(Config()), []).word_count
     assert f"The post has {words} words" in fix_prompt and "between 120 and 250" in fix_prompt
+    assert "Never just delete the" in fix_prompt
 
 
 def test_model_artifacts_are_removed_before_anything_is_checked() -> None:

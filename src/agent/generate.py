@@ -120,6 +120,7 @@ def generate_post(llm: LLM, config: Config, brief: PostBrief) -> GenerationResul
         else:
             text = write_draft(llm, config, brief, feedback=feedback, previous=previous)
             drafts, streak = drafts + 1, 0
+        # Mechanical clean-up before anything is checked, so the checked text is the posted text.
         text = strip_reply_artifacts(limit_em_dashes(text, config.max_em_dashes))
         number = len(result.attempts) + 1
         lint = lint_post(text, limits, brief.recent_posts)
