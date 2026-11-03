@@ -17,6 +17,7 @@ from agent.writer import (
     extract_post,
     limit_em_dashes,
     load_voice,
+    strip_reply_artifacts,
     tidy_post,
     write_draft,
 )
@@ -351,3 +352,41 @@ def test_editor_is_asked_to_check_each_personal_claim() -> None:
 )
 def test_limit_em_dashes(text: str, expected: str) -> None:
     assert limit_em_dashes(text, 1) == expected
+
+
+RUN_7_PREAMBLE = (
+    "Here is a 100% human, non-robotic engineer's reaction to a piece of news, presented in a "
+    "style that LinkedIn will love and find valuable."
+)
+
+
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [
+        (
+            f"{RUN_7_PREAMBLE}\n\nAn engineering blog post from AWS.\n\n#AI",
+            "An engineering blog post from AWS.\n\n#AI",
+        ),
+        ("Sure! Here's the revised draft:\n\nThe real post.\n\n#AI", "The real post.\n\n#AI"),
+        ("The post.\n\nLet me know if you want changes.\n\n#AI", "The post.\n\n#AI"),
+        (
+            "Getting an LLM to *describe* a workflow is easy. Doing **it** is not.\n\n#AI",
+            "Getting an LLM to describe a workflow is easy. Doing it is not.\n\n#AI",
+        ),
+    ],
+)
+def test_model_artifacts_are_stripped(text: str, expected: str) -> None:
+    assert strip_reply_artifacts(text) == expected
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "Here is what surprised me about the AWS post.\n\nMore text.\n\n#AI",
+        "Five * three * two is thirty.\n\n#AI",
+        "Two things:\n\n* the queue\n* the retries\n\n#AI",
+        "One line only, here's the draft:",
+    ],
+)
+def test_ordinary_text_is_left_alone(text: str) -> None:
+    assert strip_reply_artifacts(text) == text

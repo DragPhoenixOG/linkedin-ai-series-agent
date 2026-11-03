@@ -173,6 +173,21 @@ def test_rank_drops_unconfirmed_thin_and_covered_stories() -> None:
     assert [c.title for c in ranked] == ["Good story", "Official only story"]
 
 
+def test_separate_articles_from_one_site_are_not_one_story() -> None:
+    bundle = parsed(cand("Two press posts merged", [RULES_PRESS, SDK_PRESS]), cand("Good story"))
+    ranked = rank_candidates(bundle, History(), Config(), TODAY)
+    assert [c.title for c in ranked] == ["Good story"]
+
+
+def test_news_scan_asks_for_one_event_per_candidate() -> None:
+    from agent.templates import render
+
+    prompt = render(
+        "news_scan", today="2026-11-03", lookback_days=7, covered="(none)", headlines="[A1] x"
+    )
+    assert "Each candidate is one event" in prompt
+
+
 def test_pick_story_verifies_against_fetched_text() -> None:
     llm = FakeLLM(
         {"news.scan": {"candidates": [cand("Good story", relevance=5)]}, "news.verify": verified()}

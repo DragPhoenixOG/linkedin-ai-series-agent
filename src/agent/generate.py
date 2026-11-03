@@ -21,7 +21,13 @@ from agent.editor import EditorReview, edit_draft
 from agent.lint import LintLimits, LintResult, lint_post
 from agent.llm import LLM
 from agent.logs import log_event
-from agent.writer import PostBrief, fix_sentences, limit_em_dashes, write_draft
+from agent.writer import (
+    PostBrief,
+    fix_sentences,
+    limit_em_dashes,
+    strip_reply_artifacts,
+    write_draft,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -112,7 +118,8 @@ def generate_post(llm: LLM, config: Config, brief: PostBrief) -> GenerationResul
         else:
             text = write_draft(llm, config, brief, feedback=feedback, previous=previous)
             drafts += 1
-        text = limit_em_dashes(text, config.max_em_dashes)
+        # Mechanical clean-up before anything is checked, so the checked text is the posted text.
+        text = strip_reply_artifacts(limit_em_dashes(text, config.max_em_dashes))
         number = len(result.attempts) + 1
         lint = lint_post(text, limits, brief.recent_posts)
         review = edit_draft(llm, config, brief, text, checks=lint)

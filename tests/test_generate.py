@@ -275,3 +275,11 @@ def test_extra_em_dashes_become_commas_before_anything_is_checked() -> None:
     assert result.success
     assert "\u2014" not in result.best.text and ", twice, really." in result.best.text
     assert "\u2014" not in llm.calls[1]["prompt"].split("<draft>")[1]  # the editor saw commas
+
+
+def test_model_artifacts_are_removed_before_anything_is_checked() -> None:
+    wrapped = f"Here's the post for LinkedIn:\n\n{CLEAN_POST.replace('boring', '*boring*', 1)}"
+    llm = FakeLLM({"writer": f"<post>{wrapped}</post>", "editor": review(9, "")})
+    result = generate_post(llm, Config(), brief())
+    assert result.success and result.best.text == CLEAN_POST
+    assert "Here's the post" not in llm.calls[1]["prompt"]  # the editor saw the cleaned text
