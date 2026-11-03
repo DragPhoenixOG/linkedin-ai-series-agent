@@ -1,10 +1,15 @@
-# LinkedIn AI Series Agent
+# LinkedIn Series Agent
 
 A small Python agent that researches, writes, quality-checks and publishes a LinkedIn post
-every 3 days on AI and the future of tech. It runs on GitHub Actions with no manual step, posts
-through LinkedIn's official API, and keeps a full record of everything it publishes. It runs on
-open models through Amazon Bedrock for a few cents a month, and also supports free model tiers
-(Gemini, Groq) and Claude.
+every few days, as an ongoing series on a subject you choose, in your voice. It runs on GitHub
+Actions with no manual step, posts through LinkedIn's official API, and keeps a full record of
+everything it publishes. It runs on open models through Amazon Bedrock for a few cents a month,
+and also supports free model tiers (Gemini, Groq) and Claude.
+
+Who writes the series and what it covers live in a few files under `content/`. The repository
+ships with a working example: a series on AI and the future of tech, by Ashish Ranjan. Replace
+those files with your own and it writes your series instead: see
+[Make it yours](#make-it-yours).
 
 The hard part isn't calling an API. It's getting posts that read like a person wrote them, with
 facts that hold up, every time, unattended. Most of this repo is about that: research grounded
@@ -13,7 +18,7 @@ targeted fixes instead of blind rewrites, and clear alerts when something needs 
 
 ## What it does
 
-Every day at 03:30 UTC (9:00 AM IST) a GitHub Actions run:
+Every day at 03:30 UTC (9:00 AM IST; [change the time](#changing-things)) a GitHub Actions run:
 
 1. Publishes a draft that has finished its review window, unless you rejected it (see
    [Review before posting](#review-before-posting)).
@@ -106,7 +111,7 @@ personal facts the agent may use in `content/author.md`, and the research source
   humorous posts "actually funny and still professional" (needs 7/10). It gets the lint results
   and today's date, so it doesn't count words or guess at dates, and it quotes every line that
   sounds generic or isn't backed by the research or author facts.
-- **No invented stories.** Code picks out every sentence where the author seems to say he did,
+- **No invented stories.** Code picks out every sentence where the author seems to say they did,
   saw or made something ("I made an order yesterday", "we've spent the last year") and the
   editor must check each one against `content/author.md`. Mini stories have to open as plainly
   hypothetical ("Picture a retailer whose...").
@@ -121,6 +126,35 @@ personal facts the agent may use in `content/author.md`, and the research source
   adds around a post: an opening line announcing it ("Here is a ... post LinkedIn will love"), a
   "Let me know..." sign-off, and markdown `*emphasis*`, which LinkedIn shows as literal asterisks.
 
+## Make it yours
+
+The short version. Each step links to the details.
+
+1. **Get your own copy.** Click **Use this template** (or fork) on GitHub. Your copy gets the
+   code but none of the original author's secrets, so it can't post anywhere until you set it
+   up. Then, before anything else, open **Actions > Post to LinkedIn > ... > Disable workflow**,
+   so the daily schedule doesn't run while the setup is half done. You'll turn it back on at the
+   end.
+2. **Replace the example content** in `content/` (see [Run your own series](#run-your-own-series)):
+   - `series.yaml`: who writes the series and what it's about;
+   - `author.md`: the only personal facts the posts may use;
+   - `topics.yaml`: your first topics, all `status: pending`;
+   - `feeds.yaml`: RSS feeds and Hacker News queries for your subject;
+   - `style.md`: optional, the voice and banned phrases.
+3. **Start with an empty history.** A fresh copy already has one: `state/history.json` is
+   `{"posts": []}` and `posts/` is empty. If you copied a series that has posted before, reset
+   those two, or the agent will think it already posted.
+4. **`CLAUDE.md`** is the original project brief, written for Claude Code when the agent was
+   built. It describes the example series. If you'll change the code with Claude Code, rewrite
+   it for your series; otherwise you can delete it. The agent itself never reads it.
+5. **Check `config.yaml`:** the model provider and names, `post_interval_days` (default 3),
+   `review_window_hours` (default 20: each draft is emailed to you and waits that long before
+   posting), and the news and humour ratios.
+6. **Set up the model key, the LinkedIn app and token, and the GitHub secrets:** [Setup](#setup)
+   steps 2-5.
+7. **Check and preview:** run the workflow with **check**, then a few dry runs ([step 6](#6-check-the-setup-and-preview-posts)).
+8. **Go live:** enable the workflow again and make the first post ([step 7](#7-go-live)).
+
 ## Setup
 
 You need a GitHub account, a LinkedIn account, and an API key from a model provider. About 45
@@ -128,7 +162,10 @@ minutes in total; only step 4 needs anything installed on your computer.
 
 ### 1. Get the code
 
-Fork or clone this repository. Everything below happens in your copy.
+Click **Use this template** or fork this repository; everything below happens in your copy.
+GitHub turns scheduled workflows off in forks until you enable them under **Actions**; in a copy
+made from a template they are on, so disable **Post to LinkedIn** until the setup is done (see
+[Make it yours](#make-it-yours), step 1).
 
 ### 2. Model provider
 
@@ -311,8 +348,8 @@ The same from a local checkout, with the key in `.env`:
 
 ### 7. Go live
 
-1. **Close leftovers.** Before LinkedIn was set up, the daily run had nothing to post with and
-   may have opened `needs-attention` issues. Close them.
+1. **Enable the workflow** (**Actions > Post to LinkedIn > Enable workflow**) if you disabled it
+   during setup, and close any `needs-attention` issues opened before LinkedIn was set up.
 2. **Choose how much control you want.** `review_window_hours: 20` (the current setting) emails
    you each draft and posts it on the next day's run unless you reject it. `0` posts straight
    away. See [Review before posting](#review-before-posting).
@@ -339,8 +376,8 @@ same steps as tick boxes.
 
 ### What happens on its own
 
-- The workflow runs daily at 9:00 AM IST. GitHub sometimes starts scheduled runs 10-60 minutes
-  late.
+- The workflow runs daily at 03:30 UTC (9:00 AM IST). GitHub sometimes starts scheduled runs
+  10-60 minutes late.
 - It posts when 3 or more days have passed since the last post. Other days finish quietly in
   about a minute.
 - On a day when the quality checks fail, nothing is posted, you get a `needs-attention` issue
@@ -369,6 +406,9 @@ fully automatic posting once you trust the posts.
 
 - **Who and what the series is about.** `content/series.yaml`; see
   [Run your own series](#run-your-own-series).
+- **The time it runs.** Edit the `cron` line in `.github/workflows/post.yml` (UTC, e.g.
+  `"30 3 * * *"` is 03:30 UTC). Keep `post_time_utc` in `config.yaml` in step; it's only
+  informational. The agent decides itself whether a given day is a posting day.
 - **Topics.** Append to `content/topics.yaml` with a unique `id`, a `title`, an `angle` and
   `status: pending`. Topics are used in file order. The agent adds its own (marked
   `source: auto`) when fewer than 3 are pending; set `auto_extend_topics: false` to stop that.
@@ -412,9 +452,10 @@ fully automatic posting once you trust the posts.
 
 ## Run your own series
 
-Nothing in the code is tied to this series. Everything about who writes it and what it covers
-lives in five files under `content/`, so anyone can run their own series, on any subject
-(farm tech, logistics, e-commerce, order management, ...), from a copy of this repository.
+Nothing in the code is tied to the example series. Everything about who writes it and what it
+covers lives in five files under `content/`, so anyone can run their own series, on any subject
+(farm tech, logistics, e-commerce, order management, ...), from a copy of this repository. The
+files in the repository are a complete, working example (an AI series); replace them with yours.
 
 | File | What to put in it |
 |---|---|
@@ -456,7 +497,21 @@ news:
 
 Every field is required. A missing, empty or misspelled field stops the run with a message
 naming it. The tests check that a different `series.yaml` reaches every prompt and that nothing
-from this series leaks into it.
+from the example series leaks into it.
+
+Tips for a new series:
+
+- **Start with 6-10 topics** in `topics.yaml`, in the order you want them. Each needs a unique
+  `id`, a `title`, an `angle` (one or two sentences on what the post should argue) and
+  `status: pending`.
+- **Keep `author.md` short and true.** The editor rejects any personal story not backed by it,
+  so a few concrete facts (role, years, the kind of work you do) are worth more than a long bio.
+  Never put client or employer names there if you don't want them in posts.
+- **Pick feeds that publish often.** Five to fifteen active RSS feeds is plenty; mark company or
+  government sources `official: true`. Run **check** to see which feeds load and how many items
+  each returns.
+- **Preview before going live.** Dry-run all four kinds of post (skill or news, straight or
+  humorous) and adjust `series.yaml` or `style.md` until they read like you.
 
 ## Issues it opens
 
@@ -542,7 +597,7 @@ On Windows use `.\.venv\Scripts\python -m pip install -e ".[dev]"` and
 ## Notes on API choices
 
 These were checked against current documentation in October 2026. Where they differ from the
-original brief in `CLAUDE.md`, that's noted and was agreed.
+original project brief in `CLAUDE.md`, that's noted.
 
 - **Model providers (change from the brief).** The brief specified the Claude API. To keep costs
   near zero, the agent talks to any OpenAI-compatible endpoint. It runs on open models through
@@ -594,6 +649,8 @@ original brief in `CLAUDE.md`, that's noted and was agreed.
 
 ## Go-live checklist
 
+- [ ] Your own `content/` files (`series.yaml`, `author.md`, `topics.yaml`, `feeds.yaml`) in
+      place, and `state/history.json` is `{"posts": []}` with `posts/` empty.
 - [ ] Model key saved as its secret (`AWS_BEARER_TOKEN_BEDROCK` for the current setup), with a
       calendar reminder before it expires, and an AWS budget alert set.
 - [ ] **Run workflow** with **check** ticked: the log ends with `All good.`
@@ -609,10 +666,13 @@ original brief in `CLAUDE.md`, that's noted and was agreed.
 - [ ] Watching the repository's issues, with GitHub email notifications on.
 - [ ] Old `needs-attention` issues from before LinkedIn was set up closed.
 - [ ] Review window decided: `20` while you build trust, `0` for fully automatic.
+- [ ] The **Post to LinkedIn** workflow enabled again (if you disabled it during setup).
 - [ ] First real post: run the workflow with only **force** ticked.
 - [ ] Checked it: the post looks right on LinkedIn, a `Posted:` issue was opened, and a
       `chore: post <slug>` commit landed on `main`.
 - [ ] Calendar reminders: about 50 days out for the LinkedIn token, and before the Bedrock key's
       expiry.
 
--- Ashish
+---
+
+Built by Ashish Ranjan. The example series in `content/` is his; replace it with yours.
