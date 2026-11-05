@@ -2,38 +2,38 @@
   "posts": [],
   "pending": {
     "record": {
-      "date": "2026-11-03",
+      "date": "2026-11-05",
       "post_type": "skill",
       "tone": "humorous",
-      "format": "dry_take",
-      "text": "The industry spent two years making models talk. Now it's trying to stop them from ordering ten thousand laptops because someone said \"make the procurement run smoother.\"\n\nAWS just published blueprints for agentic platforms and an aerospace engineering assistant. The fine print is more interesting than the demos. Agents plan. Agents supervise. But when a part substitution might ground a fleet, an actual human engineer still makes the call. The LLM assembles evidence. Deterministic code scores tolerances. Nothing ships to production on vibe.\n\nI find this strangely comforting. The industry finally admitted that \"agentic\" doesn't mean \"unattended.\" It means \"more moving parts with higher stakes.\"\n\nThe skill everyone's actually building now isn't prompt engineering. It'sOps under uncertainty: guardrails, rate limits, budgets, and the ability to roll back when your returns agent starts interpreting \"generous policy\" as \"refund everything.\"\n\nI work on order flows and returns integrations. The scariest failures are the transactions that look fine in logs and cost you money for three weeks, not the crashes. Agents scale that risk beautifully. Suddenly \"observability\" means tracking not just what ran, but what the system decided and why.\n\nThe hype says agents will do the work. The blueprints say they'll do the work inside a perimeter you defined, with a supervisor you trust, and an audit trail for when they don't.\n\nThat's less exciting. It's also the only way this works in production.\n\n#AI #AgenticAI #EnterpriseTech",
+      "format": "story",
+      "text": "Say an AI writes you a poem. Fine, poems evaporate.\n\nNow imagine one that files your taxes, cancels your flight, and actually refunds the miles.\n\nMicrosoft shipped Agent Framework skills yesterday. Basically a manual for your coding agent that says \"here's how to not wire your tools backwards.\" That's a gift. Also, draw your own conclusions about what was happening before.\n\nU Mobile in Malaysia seems to have cracked something real. Their AiDaH agents run 150+ operational scenarios on Bedrock AgentCore and cut some ticket categories by 84%. The machine checks configs, verifies eligibility, finds the break, proposes a fix. All before a human opens their eyes.\n\nHere's what nobody puts in the press release: content is forgiving. Actions leave receipts. Every decision an agent makes is a liability with a timestamp, sitting in a log someone will read at 2am while a manager asks why the warehouse shut down.\n\nThe hard skill now is building agents you can explain to a regulator, debug when everything's on fire, and gracefully shut down when they get creative about what \"refund\" means. Everything else is just wiring.\n\n#AgenticAI #EnterpriseReliability",
       "slug": "from-generative-ai-to-agentic-ai",
       "topic_id": "generative-to-agentic-ai",
       "topic_title": "From Generative AI to Agentic AI",
       "news_story": null,
       "sources": [
         {
-          "url": "https://aws.amazon.com/blogs/machine-learning/building-an-agentic-ai-platform-on-amazon-bedrock-agentcore/",
-          "title": "Building an Agentic AI Platform on Amazon Bedrock AgentCore",
-          "publisher": "AWS Machine Learning Blog",
+          "url": "https://devblogs.microsoft.com/agent-framework/give-your-coding-agent-a-head-start-with-microsoft-agent-framework-skills-for-net-and-python/",
+          "title": "Give your coding agent a head start with Microsoft Agent Framework skills for .NET and Python",
+          "publisher": "Semantic Kernel and Agent Framework Blog",
           "official": true
         },
         {
-          "url": "https://aws.amazon.com/blogs/machine-learning/agentic-engineering-intelligence-with-amazon-nova-multimodal-embeddings-and-amazon-bedrock-agentcore/",
-          "title": "Agentic engineering intelligence with Amazon Nova Multimodal Embeddings and Amazon Bedrock AgentCore",
+          "url": "https://aws.amazon.com/blogs/machine-learning/how-u-mobile-built-agentic-telco-operations-with-amazon-bedrock-agentcore/",
+          "title": "How U Mobile built agentic telco operations with Amazon Bedrock AgentCore",
           "publisher": "AWS Machine Learning Blog",
           "official": true
         }
       ],
-      "editor_score": 8,
-      "humour_score": 7,
-      "attempts": 2,
+      "editor_score": 9,
+      "humour_score": 8,
+      "attempts": 4,
       "urn": null,
       "linkedin_url": null
     },
-    "created_at": "2026-11-03T11:07:16.090930+00:00",
-    "publish_after": "2026-11-04T07:07:16.090930+00:00",
-    "issue_number": 38,
-    "research_notes": "1. (2026-10-28) A new AWS architectural blueprint for an 'enterprise Agentic AI Platform' was published, built on Amazon Bedrock AgentCore. It provides governed model and tool access, delegated delivery for teams, and lifecycle controls.\n   Why it matters: It addresses core trust and reliability challenges for deploying agentic AI at scale, giving platform teams a governed framework to manage risk.\n   Details stated in the articles:\n   - The blueprint is called the 'Enterprise Agentic AI Platform Blueprint' and is built on Amazon Bedrock AgentCore.\n   - It enforces rules so agents can only use approved models through a gateway with guardrails, rate limits, and budgets.\n   - It ensures agents can only discover and invoke approved tools through an authenticated Model Context Protocol (MCP) gateway.\n   - It provides a repeatable deployment pattern so Workstream teams can ship and roll back independently within pre-approved boundaries.\n   Sources: AWS Machine Learning Blog <https://aws.amazon.com/blogs/machine-learning/building-an-agentic-ai-platform-on-amazon-bedrock-agentcore/>\n2. (2026-11-02) AWS detailed a multi-agent engineering assistant built on Amazon Bedrock AgentCore and Amazon Nova Multimodal Embeddings for high-stakes tasks like aerospace part substitution.\n   Why it matters: It demonstrates a real-world, high-consequence use case where trust is enforced by keeping the human in the loop and using deterministic code for critical checks.\n   Details stated in the articles:\n   - The system is a multi-agent assistant that helps engineers evaluate part substitutions by cross-referencing specifications.\n   - It uses a planner (Claude Haiku), specialist agents (Claude Sonnet), and a supervisor (Claude Opus) orchestrated on Amazon Bedrock AgentCore.\n   - A core design rule is that 'the engineer makes every decision and the system assembles the evidence for it'.\n   - Deterministic Python code, not an LLM, scores candidate parts against tolerance rules to produce pass/flag verdicts for formal review.\n   Sources: AWS Machine Learning Blog <https://aws.amazon.com/blogs/machine-learning/agentic-engineering-intelligence-with-amazon-nova-multimodal-embeddings-and-amazon-bedrock-agentcore/>"
+    "created_at": "2026-11-05T11:16:19.011378+00:00",
+    "publish_after": "2026-11-06T07:16:19.011378+00:00",
+    "issue_number": 39,
+    "research_notes": "1. (2026-11-04) On November 4, 2026, Microsoft released installable Microsoft Agent Framework builder skills for .NET and Python. These are development-time skills that give coding agents Microsoft-maintained guidance for building Agent Framework applications.\n   Why it matters: This lowers the barrier for developers building agentic workflows by providing reliable, official scaffolding for complex tasks like wiring tools, sessions, and hosting, which reduces implementation errors.\n   Details stated in the articles:\n   - The .NET skill covers AIAgent, Microsoft.Extensions.AI, NuGet packages, dependency injection, and ASP.NET Core hosting.\n   - The Python skill covers Agent, provider packages, middleware, context providers, and Python workflow patterns.\n   - The skills favor the smallest suitable pattern: one agent, a harness, or a workflow depending on requirements.\n   - Developers install them using GitHub CLI or a cross-agent CLI, e.g., 'gh skill install microsoft/agent-framework agent-framework-builder-dotnet@main'.\n   Sources: Semantic Kernel and Agent Framework Blog <https://devblogs.microsoft.com/agent-framework/give-your-coding-agent-a-head-start-with-microsoft-agent-framework-skills-for-net-and-python/>\n2. (2026-11-04) Malaysian telco U Mobile built and deployed 'AiDaH', an AI-Driven Agentic Helpdesk on Amazon Bedrock AgentCore, which now handles over 150 documented operational scenarios and has reduced trouble ticket volumes by up to 84.5% in key categories.\n   Why it matters: It demonstrates a concrete, scaled enterprise implementation where agentic AI coordinates across multiple backend systems to complete complex, multi-step operational work, directly impacting business metrics.\n   Details stated in the articles:\n   - The system uses Amazon Bedrock AgentCore, a platform to build, connect, and optimize agents at scale.\n   - It went live to 50 L2 call center and branch users in Q3 2026 with 8 agents.\n   - AiDaH independently checks subscriber configuration, verifies eligibility, and identifies specific points of failure before proposing remediation.\n   - U Mobile's journey started in late 2025 with two pilot agents and expanded through 2026.\n   Sources: AWS Machine Learning Blog <https://aws.amazon.com/blogs/machine-learning/how-u-mobile-built-agentic-telco-operations-with-amazon-bedrock-agentcore/>"
   }
 }
