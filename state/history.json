@@ -1,8 +1,7 @@
 {
-  "posts": [],
-  "pending": {
-    "record": {
-      "date": "2026-11-05",
+  "posts": [
+    {
+      "date": "2026-11-06",
       "post_type": "skill",
       "tone": "humorous",
       "format": "story",
@@ -28,12 +27,8 @@
       "editor_score": 9,
       "humour_score": 8,
       "attempts": 4,
-      "urn": null,
-      "linkedin_url": null
-    },
-    "created_at": "2026-11-05T11:16:19.011378+00:00",
-    "publish_after": "2026-11-06T07:16:19.011378+00:00",
-    "issue_number": 39,
-    "research_notes": "1. (2026-11-04) On November 4, 2026, Microsoft released installable Microsoft Agent Framework builder skills for .NET and Python. These are development-time skills that give coding agents Microsoft-maintained guidance for building Agent Framework applications.\n   Why it matters: This lowers the barrier for developers building agentic workflows by providing reliable, official scaffolding for complex tasks like wiring tools, sessions, and hosting, which reduces implementation errors.\n   Details stated in the articles:\n   - The .NET skill covers AIAgent, Microsoft.Extensions.AI, NuGet packages, dependency injection, and ASP.NET Core hosting.\n   - The Python skill covers Agent, provider packages, middleware, context providers, and Python workflow patterns.\n   - The skills favor the smallest suitable pattern: one agent, a harness, or a workflow depending on requirements.\n   - Developers install them using GitHub CLI or a cross-agent CLI, e.g., 'gh skill install microsoft/agent-framework agent-framework-builder-dotnet@main'.\n   Sources: Semantic Kernel and Agent Framework Blog <https://devblogs.microsoft.com/agent-framework/give-your-coding-agent-a-head-start-with-microsoft-agent-framework-skills-for-net-and-python/>\n2. (2026-11-04) Malaysian telco U Mobile built and deployed 'AiDaH', an AI-Driven Agentic Helpdesk on Amazon Bedrock AgentCore, which now handles over 150 documented operational scenarios and has reduced trouble ticket volumes by up to 84.5% in key categories.\n   Why it matters: It demonstrates a concrete, scaled enterprise implementation where agentic AI coordinates across multiple backend systems to complete complex, multi-step operational work, directly impacting business metrics.\n   Details stated in the articles:\n   - The system uses Amazon Bedrock AgentCore, a platform to build, connect, and optimize agents at scale.\n   - It went live to 50 L2 call center and branch users in Q3 2026 with 8 agents.\n   - AiDaH independently checks subscriber configuration, verifies eligibility, and identifies specific points of failure before proposing remediation.\n   - U Mobile's journey started in late 2025 with two pilot agents and expanded through 2026.\n   Sources: AWS Machine Learning Blog <https://aws.amazon.com/blogs/machine-learning/how-u-mobile-built-agentic-telco-operations-with-amazon-bedrock-agentcore/>"
-  }
+      "urn": "urn:li:share:7524428741649784832",
+      "linkedin_url": "https://www.linkedin.com/feed/update/urn:li:share:7524428741649784832/"
+    }
+  ]
 }
