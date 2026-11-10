@@ -4,7 +4,7 @@ A small Python agent that researches, writes, quality-checks and publishes a Lin
 every 3 days on AI and the future of tech. It runs on GitHub Actions with no manual step, posts
 through LinkedIn's official API, and keeps a full record of everything it publishes. It runs on
 open models through Amazon Bedrock for a few cents a month, and also supports free model tiers
-(Gemini, Groq) and Claude.
+(Gemini, Groq, Ollama) and Claude.
 
 The hard part isn't calling an API. It's getting posts that read like a person wrote them, with
 facts that hold up, every time, unattended. Most of this repo is about that: research grounded
