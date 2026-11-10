@@ -30,5 +30,91 @@
       "urn": "urn:li:share:7524428741649784832",
       "linkedin_url": "https://www.linkedin.com/feed/update/urn:li:share:7524428741649784832/"
     }
-  ]
+  ],
+  "pending": {
+    "record": {
+      "date": "2026-11-10",
+      "post_type": "news",
+      "tone": "straight",
+      "format": "news_reaction",
+      "text": "Anthropic shipped Claude Fable 5.2 and Mythos 5.2 on November 9. Fable handles general work. Mythos stays gated behind verification programs for cybersecurity and life sciences research.\n\nThe pricing is concrete. Eight dollars per million input tokens, forty for output. Speed claims are concrete. Everything else in the announcement - formalizing Fermat's Last Theorem, solving open physics problems - is Anthropic's own testing. Your mileage will vary.\n\nI keep noticing the data retention clause. Zero retention only if you qualify and request it, and only guaranteed through June 2027. Otherwise, thirty days with human safety review. Procurement reads the fine print before the compliance team asks why customer data is sitting in someone else's logs.\n\nThe cadence is the real story. Another model version, another regression cycle, another set of prompts to validate. The gap between benchmark brags and production reliability stays wide. Anthropic's tests run on curated tasks. Your agents run on real user input that misspells \"refund,\" asks for refunds that don't match policy, and hopes you don't notice.\n\nPrompt testing, structured outputs, and having a real plan for when the model goes off-script. Those are still your job. The new weights just change how fast the surprises arrive.\n\nhttps://www.anthropic.com/claude-fable-and-mythos-5-2\n\n#ModelReleases #EnterpriseReliability",
+      "slug": "anthropic-launches-claude-fable-5-2-and-claude-myt",
+      "topic_id": null,
+      "topic_title": null,
+      "news_story": {
+        "key": "anthropic-launches-claude-fable-5-2-and-claude-mythos-5-2-models",
+        "title": "Anthropic launches Claude Fable 5.2 and Claude Mythos 5.2 models",
+        "summary": "On November 9, 2026, Anthropic launched the Claude Fable 5.2 and Claude Mythos 5.2 AI models, which it states show improved coding, reasoning, and vision capabilities and are now available on AWS.",
+        "date": "2026-11-09",
+        "sources": [
+          {
+            "url": "https://www.anthropic.com/claude-fable-and-mythos-5-2",
+            "title": "Claude Fable 5.2 and Mythos 5.2",
+            "publisher": "anthropic.com (via Hacker News)",
+            "official": true
+          },
+          {
+            "url": "https://aws.amazon.com/blogs/machine-learning/introducing-claude-fable-5-2-on-aws/",
+            "title": "Introducing Claude Fable 5.2 on AWS",
+            "publisher": "AWS Machine Learning Blog",
+            "official": true
+          },
+          {
+            "url": "https://techcrunch.com/2026/11/09/anthropic-releases-new-mythos-and-fable-models-amid-rsi-concerns/",
+            "title": "Anthropic releases new Mythos and Fable models amid RSI concerns",
+            "publisher": "TechCrunch AI",
+            "official": false
+          },
+          {
+            "url": "https://www.theverge.com/ai-artificial-intelligence/1030005/anthropic-claude-fable-mythos-5-2",
+            "title": "Anthropic launches new Claude Fable and Mythos 5.2 models",
+            "publisher": "The Verge AI",
+            "official": false
+          }
+        ],
+        "angle": "Evaluate the practical impact of iterative model updates on enterprise reliability and developer workflows.",
+        "details": [
+          "Claude Fable 5.2 and Mythos 5.2 are described as the same underlying model, with Fable having strong cybersecurity and biology safeguards for general availability, while Mythos is available via verification programs for advanced work in cybersecurity and life sciences. [A1, A2]",
+          "The new models are priced at $8 per million input tokens and $40 per million output tokens, which is lower than the previous version, and can generate outputs up to 30% faster. [A1, A3]",
+          "During pre-release testing, Anthropic states the models helped complete complex software migrations, design electronic devices, solve open physics problems, and formalize the proof of Fermat's Last Theorem. [A1, A4]",
+          "Claude Fable 5.2 on Amazon Bedrock requires data retention for up to 30 days with human safety review by default, but eligible customers can use it with zero data retention through at least June 30, 2027. [A2, A3]"
+        ]
+      },
+      "sources": [
+        {
+          "url": "https://www.anthropic.com/claude-fable-and-mythos-5-2",
+          "title": "Claude Fable 5.2 and Mythos 5.2",
+          "publisher": "anthropic.com (via Hacker News)",
+          "official": true
+        },
+        {
+          "url": "https://aws.amazon.com/blogs/machine-learning/introducing-claude-fable-5-2-on-aws/",
+          "title": "Introducing Claude Fable 5.2 on AWS",
+          "publisher": "AWS Machine Learning Blog",
+          "official": true
+        },
+        {
+          "url": "https://techcrunch.com/2026/11/09/anthropic-releases-new-mythos-and-fable-models-amid-rsi-concerns/",
+          "title": "Anthropic releases new Mythos and Fable models amid RSI concerns",
+          "publisher": "TechCrunch AI",
+          "official": false
+        },
+        {
+          "url": "https://www.theverge.com/ai-artificial-intelligence/1030005/anthropic-claude-fable-mythos-5-2",
+          "title": "Anthropic launches new Claude Fable and Mythos 5.2 models",
+          "publisher": "The Verge AI",
+          "official": false
+        }
+      ],
+      "editor_score": 8,
+      "humour_score": null,
+      "attempts": 4,
+      "urn": null,
+      "linkedin_url": null
+    },
+    "created_at": "2026-11-10T11:27:09.677788+00:00",
+    "publish_after": "2026-11-11T07:27:09.677788+00:00",
+    "issue_number": 42,
+    "research_notes": "Verified story (2026-11-09): Anthropic launches Claude Fable 5.2 and Claude Mythos 5.2 models\nOn November 9, 2026, Anthropic launched the Claude Fable 5.2 and Claude Mythos 5.2 AI models, which it states show improved coding, reasoning, and vision capabilities and are now available on AWS.\n   Details stated in the articles:\n   - Claude Fable 5.2 and Mythos 5.2 are described as the same underlying model, with Fable having strong cybersecurity and biology safeguards for general availability, while Mythos is available via verification programs for advanced work in cybersecurity and life sciences. [A1, A2]\n   - The new models are priced at $8 per million input tokens and $40 per million output tokens, which is lower than the previous version, and can generate outputs up to 30% faster. [A1, A3]\n   - During pre-release testing, Anthropic states the models helped complete complex software migrations, design electronic devices, solve open physics problems, and formalize the proof of Fermat's Last Theorem. [A1, A4]\n   - Claude Fable 5.2 on Amazon Bedrock requires data retention for up to 30 days with human safety review by default, but eligible customers can use it with zero data retention through at least June 30, 2027. [A2, A3]\n   Sources:\n   - anthropic.com (via Hacker News) (official) <https://www.anthropic.com/claude-fable-and-mythos-5-2>\n   - AWS Machine Learning Blog (official) <https://aws.amazon.com/blogs/machine-learning/introducing-claude-fable-5-2-on-aws/>\n   - TechCrunch AI <https://techcrunch.com/2026/11/09/anthropic-releases-new-mythos-and-fable-models-amid-rsi-concerns/>\n   - The Verge AI <https://www.theverge.com/ai-artificial-intelligence/1030005/anthropic-claude-fable-mythos-5-2>"
+  }
 }
