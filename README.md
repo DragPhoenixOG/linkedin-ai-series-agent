@@ -547,7 +547,7 @@ original brief in `CLAUDE.md`, that's noted and was agreed.
       expiry.
       
 ## Update on the actions: 
-This automation already created one post on LinkedIn. 
+This automation already created one post on LinkedIn.
 Check here: https://www.linkedin.com/posts/ashish-ranjan1009_ai-agenticai-enterprisetech-share-7523704957901111296-I0q2/?utm_source=share&utm_medium=member_desktop&rcm=ACoAADaOPAEBxYEnP5pjlde4mAg9Elo6JjuyzHE
 
 
