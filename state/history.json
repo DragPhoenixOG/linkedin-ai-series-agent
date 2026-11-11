@@ -29,11 +29,9 @@
       "attempts": 4,
       "urn": "urn:li:share:7524428741649784832",
       "linkedin_url": "https://www.linkedin.com/feed/update/urn:li:share:7524428741649784832/"
-    }
-  ],
-  "pending": {
-    "record": {
-      "date": "2026-11-10",
+    },
+    {
+      "date": "2026-11-11",
       "post_type": "news",
       "tone": "straight",
       "format": "news_reaction",
@@ -109,12 +107,8 @@
       "editor_score": 8,
       "humour_score": null,
       "attempts": 4,
-      "urn": null,
-      "linkedin_url": null
-    },
-    "created_at": "2026-11-10T11:27:09.677788+00:00",
-    "publish_after": "2026-11-11T07:27:09.677788+00:00",
-    "issue_number": 42,
-    "research_notes": "Verified story (2026-11-09): Anthropic launches Claude Fable 5.2 and Claude Mythos 5.2 models\nOn November 9, 2026, Anthropic launched the Claude Fable 5.2 and Claude Mythos 5.2 AI models, which it states show improved coding, reasoning, and vision capabilities and are now available on AWS.\n   Details stated in the articles:\n   - Claude Fable 5.2 and Mythos 5.2 are described as the same underlying model, with Fable having strong cybersecurity and biology safeguards for general availability, while Mythos is available via verification programs for advanced work in cybersecurity and life sciences. [A1, A2]\n   - The new models are priced at $8 per million input tokens and $40 per million output tokens, which is lower than the previous version, and can generate outputs up to 30% faster. [A1, A3]\n   - During pre-release testing, Anthropic states the models helped complete complex software migrations, design electronic devices, solve open physics problems, and formalize the proof of Fermat's Last Theorem. [A1, A4]\n   - Claude Fable 5.2 on Amazon Bedrock requires data retention for up to 30 days with human safety review by default, but eligible customers can use it with zero data retention through at least June 30, 2027. [A2, A3]\n   Sources:\n   - anthropic.com (via Hacker News) (official) <https://www.anthropic.com/claude-fable-and-mythos-5-2>\n   - AWS Machine Learning Blog (official) <https://aws.amazon.com/blogs/machine-learning/introducing-claude-fable-5-2-on-aws/>\n   - TechCrunch AI <https://techcrunch.com/2026/11/09/anthropic-releases-new-mythos-and-fable-models-amid-rsi-concerns/>\n   - The Verge AI <https://www.theverge.com/ai-artificial-intelligence/1030005/anthropic-claude-fable-mythos-5-2>"
-  }
+      "urn": "urn:li:share:7526241335637508096",
+      "linkedin_url": "https://www.linkedin.com/feed/update/urn:li:share:7526241335637508096/"
+    }
+  ]
 }
