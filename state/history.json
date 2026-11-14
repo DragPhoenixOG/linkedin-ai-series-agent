@@ -110,5 +110,41 @@
       "urn": "urn:li:share:7526241335637508096",
       "linkedin_url": "https://www.linkedin.com/feed/update/urn:li:share:7526241335637508096/"
     }
-  ]
+  ],
+  "pending": {
+    "record": {
+      "date": "2026-11-14",
+      "post_type": "skill",
+      "tone": "humorous",
+      "format": "contrarian",
+      "text": "AWS gave each Bedrock agent its own Firecracker MicroVM this week. Four times the compute, sixty-eight percent more efficient, fifteen times faster to boot. The press release practically glows. Every pitch about blast radius and sandboxing sounds the same until a page wakes someone up at 3 a.m.\n\nA stuck agent in its own VM won't eat its neighbors' memory. That's nice. Isolation without visibility means when an orchestrator spins up a fleet of agents and some start generating wrong outputs, \"well, they can't crash each other\" is cold comfort. You still don't know which one turned a return into a fire sale on live inventory.\n\nMicrosoft shipped Agent Framework skills last week. `gh skill install`, pick the smallest pattern that works. Good advice. Most multi-agent headaches come from starting with six agents when two would do. The scaffolding helps you build the thing. It does not help you watch it.\n\nMicroservices taught us small services plus decent observability beats big services plus hope. Agents are about to teach us the same lesson, except the services can get creative about their own purpose. Bedrock's VM isolation and Microsoft's builder skills both assume you'll build the observability yourself. Historically, we build the demo first. The dashboard comes never.\n\nContain the blast radius. Then build the map so you can find the crater.\n\n#MultiAgentSystems #EnterpriseReliability",
+      "slug": "multi-agent-systems",
+      "topic_id": "multi-agent-systems",
+      "topic_title": "Multi-agent systems",
+      "news_story": null,
+      "sources": [
+        {
+          "url": "https://aws.amazon.com/blogs/machine-learning/run-agents-securely-and-efficiently-with-the-next-generation-agentcore-runtime/",
+          "title": "Run agents securely and efficiently with the next generation AgentCore runtime",
+          "publisher": "AWS Machine Learning Blog",
+          "official": true
+        },
+        {
+          "url": "https://devblogs.microsoft.com/agent-framework/give-your-coding-agent-a-head-start-with-microsoft-agent-framework-skills-for-net-and-python/",
+          "title": "Give your coding agent a head start with Microsoft Agent Framework skills for .NET and Python",
+          "publisher": "Semantic Kernel and Agent Framework Blog",
+          "official": true
+        }
+      ],
+      "editor_score": 8,
+      "humour_score": 7,
+      "attempts": 6,
+      "urn": null,
+      "linkedin_url": null
+    },
+    "created_at": "2026-11-14T10:42:54.254498+00:00",
+    "publish_after": "2026-11-15T06:42:54.254498+00:00",
+    "issue_number": 44,
+    "research_notes": "1. (2026-11-12) AWS announced updates to its Amazon Bedrock AgentCore runtime, increasing session scalability and efficiency for multi-agent systems.\n   Why it matters: It addresses the infrastructure challenge of scaling secure, isolated agent sessions without sacrificing performance or cost, a key hurdle for production systems.\n   Details stated in the articles:\n   - Each session runs in its own hardware-isolated Firecracker micro virtual machine (MicroVM).\n   - Sessions now start up to 15x faster and scale to 4x more compute (up to 8 vCPUs and 32 GB).\n   - Sessions run up to 68% more efficiently.\n   Sources: AWS Machine Learning Blog <https://aws.amazon.com/blogs/machine-learning/run-agents-securely-and-efficiently-with-the-next-generation-agentcore-runtime/>\n2. (2026-11-04) Microsoft released installable builder skills for its Agent Framework, providing development-time guidance for building applications in .NET and Python.\n   Why it matters: It helps engineers implement a correct, minimal architecture for agents (like a single agent vs. a full multi-agent system), reducing complexity and improving maintainability.\n   Details stated in the articles:\n   - Released builder skills for .NET and Python, installable via `gh skill install` or `npx skills add`.\n   - Skills offer language-specific guidance (e.g., .NET covers AIAgent, dependency injection; Python covers middleware, workflows).\n   - They favor choosing the smallest suitable pattern (e.g., one agent, a harness, or a workflow).\n   Sources: Semantic Kernel and Agent Framework Blog <https://devblogs.microsoft.com/agent-framework/give-your-coding-agent-a-head-start-with-microsoft-agent-framework-skills-for-net-and-python/>"
+  }
 }
