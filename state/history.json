@@ -113,11 +113,11 @@
   ],
   "pending": {
     "record": {
-      "date": "2026-11-15",
+      "date": "2026-11-16",
       "post_type": "skill",
       "tone": "humorous",
-      "format": "contrarian",
-      "text": "Vendor demos still end on that slide. One agent that answers email, rewrites strategy, probably waters plants. The wiring is always immaculate. Airtight. Nothing to see here.\n\nI quietly wonder how quickly it unravels once someone misspells \"refund.\"\n\nMicrosoft shipped builder skills this week. Actual guidance for coding agents working in .NET and Python. AWS updated Bedrock AgentCore with hardware-isolated sessions that start faster. Both gestures say the same thing: reliable agents need walls.\n\nSmall agents, single jobs. An orchestrator that notices when something drifts and has permission to stop it. Each unit fails alone. Each one you can test without waking the entire system.\n\nMicroservices taught us this. The hype cycle just forgot.\n\nMy bias is showing. I map order flows between systems that talk reluctantly. When an OMS agent decides a return is valid, I want that logic in a box I understand, not spread across twelve prompts I can't read in a stack trace.\n\nThe orchstrator isn't the clever part. Keeping agents small enough to trust is.\n\n#MultiAgentSystems #EnterpriseReliability #AIArchitecture",
+      "format": "dry_take",
+      "text": "AWS shipped AgentCore updates this week. Sessions start 15x faster, scale to 8 vCPUs, and each runs in its own Firecracker micro-VM.\n\nThe A2A protocol is now a Linux Foundation thing, which means marketing finally has a whitepaper to point at while engineers figure out why two agents won't handshake.\n\nI keep thinking about the microservices hangover. The industry spent years splitting monoliths into services nobody could trace, then built entire companies selling tools to stare at distributed traces. With agents, we get to do it again, except now the services also hallucinate.\n\nThe AWS reference architecture shows an orchestrator pulling skills from Agent Cards without touching existing code. Works on paper. Reality is someone's JSON specification being subtly wrong and nobody knowing why suppliers stopped getting paid until 3am.\n\nSmall agents with narrow jobs mean logs I can actually read. Failures that stay in their lane. When one decides \"refund\" means \"refund everything including inventory that never shipped,\" I stop that one. The rest keep running.\n\nMission reported a 17% drop in runtime costs with the new AgentCore. That's nice. What I'd actually want in production is a kill switch I trust, an orchestrator that knows what \"done\" looks like, and enough isolation that I don't have to explain to finance why one creative agent paused every supplier payment for twenty minutes.\n\nThe frameworks make it possible. Knowing which plug to pull, and when, is still your job.\n\n#MultiAgentSystems #EnterpriseReliability #AgenticAI",
       "slug": "multi-agent-systems",
       "topic_id": "multi-agent-systems",
       "topic_title": "Multi-agent systems",
@@ -130,21 +130,21 @@
           "official": true
         },
         {
-          "url": "https://devblogs.microsoft.com/agent-framework/give-your-coding-agent-a-head-start-with-microsoft-agent-framework-skills-for-net-and-python/",
-          "title": "Give your coding agent a head start with Microsoft Agent Framework skills for .NET and Python",
-          "publisher": "Semantic Kernel and Agent Framework Blog",
+          "url": "https://aws.amazon.com/blogs/machine-learning/build-composable-interoperable-multi-agent-systems-with-a2a-on-aws/",
+          "title": "Build composable, interoperable multi-agent systems with A2A on AWS",
+          "publisher": "AWS Machine Learning Blog",
           "official": true
         }
       ],
       "editor_score": 8,
       "humour_score": 7,
-      "attempts": 2,
+      "attempts": 5,
       "urn": null,
       "linkedin_url": null
     },
-    "created_at": "2026-11-15T11:17:59.010672+00:00",
-    "publish_after": "2026-11-16T07:17:59.010672+00:00",
-    "issue_number": 45,
-    "research_notes": "1. (2026-11-12) In November 2026, AWS announced updates to the AgentCore runtime for Amazon Bedrock, delivering faster, more scalable hardware-isolated sessions for agents. Microsoft also introduced new developer skills for its Agent Framework, providing coding agents with official guidance for building applications in .NET and Python.\n   Why it matters: These developments provide the secure, scalable infrastructure and structured guidance needed to build and deploy reliable multi-agent systems, where contained failures and testable parts are paramount.\n   Details stated in the articles:\n   - The updated AgentCore runtime provides hardware-isolated Firecracker microVMs per session, now starting up to 15x faster, scaling to 8 vCPUs and 32 GB, and supporting container images up to 10 GB.\n   - Microsoft released installable 'builder skills' for .NET and Python, which are development-time skills that give coding agents Microsoft-maintained guidance for building Agent Framework applications.\n   Sources: AWS Machine Learning Blog <https://aws.amazon.com/blogs/machine-learning/run-agents-securely-and-efficiently-with-the-next-generation-agentcore-runtime/>; Semantic Kernel and Agent Framework Blog <https://devblogs.microsoft.com/agent-framework/give-your-coding-agent-a-head-start-with-microsoft-agent-framework-skills-for-net-and-python/>"
+    "created_at": "2026-11-16T11:49:11.161471+00:00",
+    "publish_after": "2026-11-17T07:49:11.161471+00:00",
+    "issue_number": 46,
+    "research_notes": "1. (2026-11-12) AWS announced an update to its AgentCore runtime, part of Amazon Bedrock AgentCore, delivering faster cold starts and greater scalability for hardware-isolated agent sessions.\n   Why it matters: This addresses a key scaling challenge for production multi-agent systems by providing secure, isolated environments without sacrificing performance or cost efficiency.\n   Details stated in the articles:\n   - Sessions now start up to 15x faster, independent of image size and concurrency.\n   - Sessions can scale to 4x more compute, up to 8 vCPUs and 32 GB of memory.\n   - Each session runs in its own hardware-isolated Firecracker micro virtual machine (MicroVM).\n   - Mission reported a 17% reduction in runtime cost per call with the new version.\n   Sources: AWS Machine Learning Blog <https://aws.amazon.com/blogs/machine-learning/run-agents-securely-and-efficiently-with-the-next-generation-agentcore-runtime/>\n2. (2026-11-12) AWS introduced a reference architecture and use case demonstrating how the Agent-to-Agent (A2A) protocol, now a Linux Foundation project, enables interoperable multi-agent systems across organizational boundaries.\n   Why it matters: This solves the integration problem of connecting agents built with different frameworks (like LangChain and Strands) across separate organizations or teams.\n   Details stated in the articles:\n   - A reference architecture shows a LangChain-based enterprise orchestrator communicating with a Strands Agents-based SaaS agent across separate AWS accounts.\n   - The A2A protocol uses OAuth 2.0 and OpenID Connect for cross-boundary security without sharing secrets.\n   - Agents discover each other and exchange tasks via standardized Agent Cards.\n   - The pattern allows adding skills by registering new Agent Cards with an orchestrator without changing existing agents.\n   Sources: AWS Machine Learning Blog <https://aws.amazon.com/blogs/machine-learning/build-composable-interoperable-multi-agent-systems-with-a2a-on-aws/>"
   }
 }
