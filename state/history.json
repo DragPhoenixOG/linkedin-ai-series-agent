@@ -109,11 +109,9 @@
       "attempts": 4,
       "urn": "urn:li:share:7526241335637508096",
       "linkedin_url": "https://www.linkedin.com/feed/update/urn:li:share:7526241335637508096/"
-    }
-  ],
-  "pending": {
-    "record": {
-      "date": "2026-11-16",
+    },
+    {
+      "date": "2026-11-17",
       "post_type": "skill",
       "tone": "humorous",
       "format": "dry_take",
@@ -139,12 +137,8 @@
       "editor_score": 8,
       "humour_score": 7,
       "attempts": 5,
-      "urn": null,
-      "linkedin_url": null
-    },
-    "created_at": "2026-11-16T11:49:11.161471+00:00",
-    "publish_after": "2026-11-17T07:49:11.161471+00:00",
-    "issue_number": 46,
-    "research_notes": "1. (2026-11-12) AWS announced an update to its AgentCore runtime, part of Amazon Bedrock AgentCore, delivering faster cold starts and greater scalability for hardware-isolated agent sessions.\n   Why it matters: This addresses a key scaling challenge for production multi-agent systems by providing secure, isolated environments without sacrificing performance or cost efficiency.\n   Details stated in the articles:\n   - Sessions now start up to 15x faster, independent of image size and concurrency.\n   - Sessions can scale to 4x more compute, up to 8 vCPUs and 32 GB of memory.\n   - Each session runs in its own hardware-isolated Firecracker micro virtual machine (MicroVM).\n   - Mission reported a 17% reduction in runtime cost per call with the new version.\n   Sources: AWS Machine Learning Blog <https://aws.amazon.com/blogs/machine-learning/run-agents-securely-and-efficiently-with-the-next-generation-agentcore-runtime/>\n2. (2026-11-12) AWS introduced a reference architecture and use case demonstrating how the Agent-to-Agent (A2A) protocol, now a Linux Foundation project, enables interoperable multi-agent systems across organizational boundaries.\n   Why it matters: This solves the integration problem of connecting agents built with different frameworks (like LangChain and Strands) across separate organizations or teams.\n   Details stated in the articles:\n   - A reference architecture shows a LangChain-based enterprise orchestrator communicating with a Strands Agents-based SaaS agent across separate AWS accounts.\n   - The A2A protocol uses OAuth 2.0 and OpenID Connect for cross-boundary security without sharing secrets.\n   - Agents discover each other and exchange tasks via standardized Agent Cards.\n   - The pattern allows adding skills by registering new Agent Cards with an orchestrator without changing existing agents.\n   Sources: AWS Machine Learning Blog <https://aws.amazon.com/blogs/machine-learning/build-composable-interoperable-multi-agent-systems-with-a2a-on-aws/>"
-  }
+      "urn": "urn:li:share:7528428997962133504",
+      "linkedin_url": "https://www.linkedin.com/feed/update/urn:li:share:7528428997962133504/"
+    }
+  ]
 }

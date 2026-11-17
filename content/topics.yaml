@@ -18,9 +18,9 @@ topics:
   title: Multi-agent systems
   angle: 'Small specialised agents + an orchestrator (Microsoft Agent Framework, Semantic Kernel, AutoGen,
     LangChain). Same lesson as microservices: contained failures, testable parts.'
-  status: pending
-  posted_on: null
-  linkedin_url: null
+  status: posted
+  posted_on: '2026-11-17'
+  linkedin_url: https://www.linkedin.com/feed/update/urn:li:share:7528428997962133504/
   source: seed
 - id: model-context-protocol
   title: Model Context Protocol (MCP)
